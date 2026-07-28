@@ -72,7 +72,9 @@ function headingCandidates(text: string): string[] {
 function looksLikeHeading(line: string): boolean {
   if (
     /^(titre|chapitre|section|sous-section|annexe)\b/i.test(line) ||
-    /^(?:[0-9]+(?:\.[0-9]+){0,4}|[IVXLCDM]+)\s*[-–—.)]\s+\S/i.test(line)
+    /^[0-9]+(?:\.[0-9]+){1,4}\s+\S/.test(line) ||
+    /^[0-9]+(?:\.[0-9]+){0,4}\s*[-–—.)]\s+\S/i.test(line) ||
+    /^[IVXLCDM]+\s*[-–—.)]\s+\S/.test(line)
   ) {
     return true;
   }
@@ -81,9 +83,10 @@ function looksLikeHeading(line: string): boolean {
     letters.every((char) => char === char.toLocaleUpperCase("fr-CH"));
 }
 
-function detectHeading(text: string): string | null {
-  const line = headingCandidates(text).find(looksLikeHeading);
-  return line?.slice(0, 250) ?? null;
+function detectHeadings(text: string): string[] {
+  return headingCandidates(text)
+    .filter(looksLikeHeading)
+    .map((line) => line.slice(0, 250));
 }
 
 function buildSourceReference(
@@ -107,19 +110,20 @@ export function chunkDocument(
   title: string,
 ): PassageDraft[] {
   const passages: PassageDraft[] = [];
+  let currentHeading: string | null = null;
 
   extracted.segments.forEach((segment, segmentIndex) => {
-    let currentHeading: string | null = null;
     const segmentChunks = splitText(segment.text);
     segmentChunks.forEach((content, segmentChunkIndex) => {
-      currentHeading = detectHeading(content) ?? currentHeading;
+      const detectedHeadings = detectHeadings(content);
+      const sectionTitle = detectedHeadings[0] ?? currentHeading;
       const chunkIndex = passages.length;
       passages.push({
         chunkIndex,
         content,
         pageStart: segment.pageStart,
         pageEnd: segment.pageEnd,
-        sectionTitle: currentHeading,
+        sectionTitle,
         articleReference: detectArticle(content),
         sourceReference: buildSourceReference(title, segment, chunkIndex),
         metadata: {
@@ -129,6 +133,7 @@ export function chunkDocument(
           overlap_characters: segmentChunkIndex > 0 ? OVERLAP_CHARACTERS : 0,
         },
       });
+      currentHeading = detectedHeadings.at(-1) ?? currentHeading;
       if (passages.length > MAX_CHUNKS) {
         throw new RagError(
           "too_many_passages",
