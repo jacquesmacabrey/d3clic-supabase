@@ -28,7 +28,6 @@ import { RagError } from "../_shared/rag/errors.ts";
 import {
   evaluateValidatedRuleSets,
   parseValidatedRuleSets,
-  requiresDeterministicHandling,
 } from "../_shared/rag/deterministic-rules.ts";
 import {
   generateStructuredAnswer,
@@ -553,20 +552,10 @@ Deno.serve(async (request: Request) => {
     log("generation", 200, null, stepStartedAt);
 
     stepStartedAt = performance.now();
-    let result = validateAnswerAgainstSources(
+    const result = validateAnswerAgainstSources(
       generation.answer,
       context.included,
     );
-    if (
-      result.client.result !== "insufficient_sources" &&
-      requiresDeterministicHandling("", result.client.answer)
-    ) {
-      result = insufficientAnswer(
-        "Je ne peux pas confirmer cette valeur sans règle métier validée.",
-        "unvalidated_numeric_answer",
-        true,
-      );
-    }
     log("validation", 200, result.errorCode, stepStartedAt);
 
     await completeLog(

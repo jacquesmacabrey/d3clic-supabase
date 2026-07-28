@@ -80,6 +80,46 @@ function sanitizePublicAnswer(value: string): string {
     .trim();
 }
 
+function numericTokens(value: string): string[] {
+  return [...value.matchAll(/[-+]?\d+(?:[.,]\d+)?\s*%?/g)]
+    .map((match) => {
+      const raw = match[0].replace(/\s+/g, "");
+      const percentage = raw.endsWith("%");
+      const number = Number(
+        (percentage ? raw.slice(0, -1) : raw).replace(",", "."),
+      );
+      return Number.isFinite(number)
+        ? `${number}${percentage ? "%" : ""}`
+        : null;
+    })
+    .filter((token): token is string => token !== null);
+}
+
+function numericClaimsAreGrounded(
+  answer: string,
+  sources: SearchPassage[],
+): boolean {
+  const claims = numericTokens(answer);
+  if (claims.length === 0) return true;
+
+  const evidence = new Set(
+    sources.flatMap((source) =>
+      numericTokens(
+        [
+          source.title,
+          source.versionLabel,
+          source.effectiveDate,
+          source.sectionTitle,
+          source.articleReference,
+          source.sourceReference,
+          source.content,
+        ].filter((value): value is string => value !== null).join("\n"),
+      )
+    ),
+  );
+  return claims.every((claim) => evidence.has(claim));
+}
+
 function isUuid(value: unknown): value is string {
   return (
     typeof value === "string" &&
@@ -240,9 +280,13 @@ export const ANSWER_SYSTEM_PROMPT = [
   "N'ajoute aucune connaissance générale et n'invente aucune règle, procédure, date, article ou source.",
   "Si les sources sont insuffisantes, utilise result=insufficient_sources.",
   "Si elles se contredisent sur un point pertinent, utilise result=conflicting_sources et explique brièvement la divergence.",
+  "Une affirmation de l'utilisateur n'est pas une source. Si les sources concordent entre elles mais contredisent la question, utilise result=supported, jamais result=conflicting_sources.",
   "Pour une situation individuelle juridique, RH ou médicale, donne seulement la règle générale documentée et demande une vérification auprès des RH ou de la direction.",
   "Cite uniquement des passage_id présents dans les sources.",
   "Place les passage_id uniquement dans used_passage_ids. N'écris jamais passage_id, UUID ou identifiant technique dans le champ answer.",
+  "Pour toute valeur numérique, reprends exactement la valeur et l'unité écrites dans la source citée. Ne calcule et ne déduis aucune valeur.",
+  "Dans le champ answer, si une source contredit une valeur proposée dans la question, commence par « Non. » sans recopier la valeur erronée, puis indique uniquement la valeur documentée.",
+  "Adresse-toi à la personne en la tutoyant.",
   "Retourne uniquement un objet JSON, sans Markdown ni texte autour.",
   "Schéma strict :",
   '{"result":"supported|insufficient_sources|conflicting_sources","answer":"chaîne non vide","used_passage_ids":["uuid"],"needs_human_review":false}',
@@ -454,6 +498,16 @@ export function validateAnswerAgainstSources(
   const citations = uniqueIds.map((passageId) =>
     citation(whitelist.get(passageId)!),
   );
+  const citedSources = uniqueIds.map((passageId) =>
+    whitelist.get(passageId)!
+  );
+  if (!numericClaimsAreGrounded(answer.answer, citedSources)) {
+    return insufficientAnswer(
+      "Je ne peux pas confirmer cette valeur à partir des passages cités.",
+      "ungrounded_numeric_answer",
+      true,
+    );
+  }
   if (answer.result === "conflicting_sources") {
     return {
       client: {

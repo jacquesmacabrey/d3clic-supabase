@@ -102,12 +102,7 @@ function normalize(value: string): string {
 
 function questionTargetsAnnualLeave(question: string): boolean {
   const text = normalize(question);
-  const explicitlyDifferentLeave =
-    /\bconges?\s+(?:(?:de|pour)\s+)?(?:maladie|maternite|paternite|parental(?:e|es|s|aux)?|sans\s+solde)\b/
-      .test(text);
-  if (explicitlyDifferentLeave) return false;
-
-  return /\b(?:vacances?|conges?\s+(?:annuels?|payes?)|jours?\s+de\s+conges?)\b/
+  return /\b(?:vacances?|conges?\s+(?:annuels?|payes?))\b/
     .test(text);
 }
 
@@ -157,6 +152,10 @@ export function extractQuestionFacts(question: string): FactExtraction {
     /\b(-?\d+(?:[.,]\d+)?)\s*ans?\s+(?:de\s+service|d[' ]anciennet[eé])\b/g,
     /\b(?:anciennet[eé]|service)\s*(?:de|:|est\s+de)?\s*(-?\d+(?:[.,]\d+)?)\s*ans?\b/g,
     /\b(?:compte|ayant|avec)\s+(-?\d+(?:[.,]\d+)?)\s*ans?\s+(?:de\s+service|d[' ]anciennet[eé])\b/g,
+    /\b(?:cela|ca)\s+fait\s+(-?\d+(?:[.,]\d+)?)\s*ans?\s+que\s+(?:je\s+)?(?:travaille|travail|suis)\b/g,
+    /\b(?:je\s+)?travaille\s+(?:ici\s+)?depuis\s+(-?\d+(?:[.,]\d+)?)\s*ans?\b/g,
+    /\bj[' ]y\s+travaille\s+depuis\s+(-?\d+(?:[.,]\d+)?)\s*ans?\b/g,
+    /\b(?:je\s+)?travaille\s+(?:dans|pour|au\s+sein\s+de)\s+(?:cette|la|l[' ])?\s*institution\s+depuis\s+(-?\d+(?:[.,]\d+)?)\s*ans?\b/g,
   ]);
 
   const ageValues = collectNumbers(text, [
