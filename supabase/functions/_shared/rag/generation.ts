@@ -167,6 +167,14 @@ function repairModelJson(text: string): string | null {
   return candidate ? escapeControlCharactersInJsonStrings(candidate) : null;
 }
 
+function allowedPassageIdsFromContext(context: string): string[] {
+  return [
+    ...context.matchAll(
+      /<source passage_id="([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})">/gi,
+    ),
+  ].map((match) => match[1]);
+}
+
 async function generationCall(
   model: string,
   messages: ChatMessage[],
@@ -268,6 +276,8 @@ export async function generateStructuredAnswer(
     totalTokens: 0,
   };
   let previousInvalidText: string | null = null;
+  const allowedPassageIds = allowedPassageIdsFromContext(context);
+  const allowedPassageIdSet = new Set(allowedPassageIds);
 
   for (let callCount = 1; callCount <= MAX_TOTAL_CALLS; callCount += 1) {
     try {
@@ -282,7 +292,40 @@ export async function generateStructuredAnswer(
       const answer =
         parseModelAnswer(generated.text) ??
         (repairedJson ? parseModelAnswer(repairedJson) : null);
-      if (answer) return { answer, usage, callCount };
+      if (answer) {
+        const citationsAreValid =
+          answer.result === "insufficient_sources" ||
+          answer.usedPassageIds.every((passageId) =>
+            allowedPassageIdSet.has(passageId)
+          );
+        if (citationsAreValid) return { answer, usage, callCount };
+
+        console.error("generation_invalid_citation", {
+          callCount,
+          invalidCitationCount: answer.usedPassageIds.filter((passageId) =>
+            !allowedPassageIdSet.has(passageId)
+          ).length,
+        });
+
+        if (callCount === MAX_TOTAL_CALLS) {
+          return { answer, usage, callCount };
+        }
+        previousInvalidText = generated.text.slice(0, 8_000);
+        messages = [
+          ...baseMessages,
+          { role: "assistant", content: previousInvalidText },
+          {
+            role: "user",
+            content: [
+              "La sortie précédente contient un passage_id absent des sources.",
+              "Retourne uniquement un objet JSON valide conforme au schéma.",
+              "Dans used_passage_ids, copie exactement un ou plusieurs identifiants de cette liste, sans les modifier :",
+              allowedPassageIds.join(", "),
+            ].join("\n"),
+          },
+        ];
+        continue;
+      }
 
       console.error("generation_parse_failure", {
         callCount,

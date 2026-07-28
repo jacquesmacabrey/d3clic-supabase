@@ -113,8 +113,10 @@ function numericClaimsAreGrounded(
           source.articleReference,
           source.sourceReference,
           source.content,
-        ].filter((value): value is string => value !== null).join("\n"),
-      )
+        ]
+          .filter((value): value is string => value !== null)
+          .join("\n"),
+      ),
     ),
   );
   return claims.every((claim) => evidence.has(claim));
@@ -383,13 +385,100 @@ export function parseModelAnswer(text: string): ModelAnswer | null {
   };
 }
 
-function excerpt(content: string): string {
-  const normalized = content.replace(/\s+/g, " ").trim();
-  if (normalized.length <= 400) return normalized;
-  return `${normalized.slice(0, 399).trimEnd()}…`;
+const EXCERPT_MAX_CHARACTERS = 400;
+const EXCERPT_STOP_WORDS = new Set([
+  "avec",
+  "cette",
+  "dans",
+  "droit",
+  "elle",
+  "pour",
+  "plus",
+  "sans",
+  "selon",
+  "sont",
+  "sous",
+  "toute",
+  "toutes",
+  "tous",
+  "vous",
+]);
+
+function comparableText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("fr");
 }
 
-function citation(passage: SearchPassage): Citation {
+function excerptTerms(focus: string): string[] {
+  const terms = comparableText(focus).match(/\p{L}+|\d+(?:[.,]\d+)?%?/gu) ?? [];
+  return [
+    ...new Set(
+      terms.filter(
+        (term) =>
+          /\d/.test(term) ||
+          (term.length >= 4 && !EXCERPT_STOP_WORDS.has(term)),
+      ),
+    ),
+  ];
+}
+
+function excerpt(content: string, focus: string): string {
+  const normalized = content.replace(/\s+/g, " ").trim();
+  if (normalized.length <= EXCERPT_MAX_CHARACTERS) return normalized;
+
+  const haystack = comparableText(normalized);
+  const terms = excerptTerms(focus);
+  const candidateStarts = new Set([0]);
+
+  for (const term of terms) {
+    let position = haystack.indexOf(term);
+    while (position >= 0) {
+      candidateStarts.add(Math.max(0, position - 120));
+      position = haystack.indexOf(term, position + term.length);
+    }
+  }
+
+  let bestStart = 0;
+  let bestScore = -1;
+  for (const candidateStart of candidateStarts) {
+    const window = haystack.slice(
+      candidateStart,
+      candidateStart + EXCERPT_MAX_CHARACTERS,
+    );
+    const score = terms.reduce(
+      (total, term) =>
+        total + (window.includes(term) ? (/\d/.test(term) ? 4 : 1) : 0),
+      0,
+    );
+    if (score > bestScore) {
+      bestScore = score;
+      bestStart = candidateStart;
+    }
+  }
+
+  if (bestStart > 0) {
+    const nextSpace = normalized.indexOf(" ", bestStart);
+    if (nextSpace >= 0 && nextSpace - bestStart <= 30) {
+      bestStart = nextSpace + 1;
+    }
+  }
+
+  let end = Math.min(normalized.length, bestStart + EXCERPT_MAX_CHARACTERS);
+  if (end < normalized.length) {
+    const previousSpace = normalized.lastIndexOf(" ", end);
+    if (previousSpace > bestStart + EXCERPT_MAX_CHARACTERS - 30) {
+      end = previousSpace;
+    }
+  }
+
+  const prefix = bestStart > 0 ? "…" : "";
+  const suffix = end < normalized.length ? "…" : "";
+  return `${prefix}${normalized.slice(bestStart, end).trim()}${suffix}`;
+}
+
+function citation(passage: SearchPassage, focus: string): Citation {
   return {
     passage_id: passage.passageId,
     document_id: passage.documentId,
@@ -401,7 +490,7 @@ function citation(passage: SearchPassage): Citation {
     section_title: passage.sectionTitle,
     article_reference: passage.articleReference,
     source_reference: passage.sourceReference,
-    excerpt: excerpt(passage.content),
+    excerpt: excerpt(passage.content, focus),
   };
 }
 
@@ -468,7 +557,7 @@ export function validateDeterministicAnswerAgainstSources(
       answer: answer.answer,
       needs_human_review: answer.needs_human_review,
       citations: uniqueIds.map((passageId) =>
-        citation(whitelist.get(passageId)!)
+        citation(whitelist.get(passageId)!, answer.answer),
       ),
     },
     logResult:
@@ -497,11 +586,9 @@ export function validateAnswerAgainstSources(
   }
 
   const citations = uniqueIds.map((passageId) =>
-    citation(whitelist.get(passageId)!),
+    citation(whitelist.get(passageId)!, answer.answer),
   );
-  const citedSources = uniqueIds.map((passageId) =>
-    whitelist.get(passageId)!
-  );
+  const citedSources = uniqueIds.map((passageId) => whitelist.get(passageId)!);
   if (!numericClaimsAreGrounded(answer.answer, citedSources)) {
     return insufficientAnswer(
       "Je ne peux pas confirmer cette valeur à partir des passages cités.",
