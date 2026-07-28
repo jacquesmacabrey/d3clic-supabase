@@ -285,6 +285,7 @@ export const ANSWER_SYSTEM_PROMPT = [
   "Cite uniquement des passage_id présents dans les sources.",
   "Place les passage_id uniquement dans used_passage_ids. N'écris jamais passage_id, UUID ou identifiant technique dans le champ answer.",
   "Pour toute valeur numérique, reprends exactement la valeur et l'unité écrites dans la source citée. Ne calcule et ne déduis aucune valeur.",
+  "Lorsqu'une source indique explicitement un total et ses composants, et que la question porte sur la durée ou la quantité globale, commence obligatoirement la réponse par le total. Ne présente jamais un composant comme réponse principale ; tu peux ensuite préciser la composition du total.",
   "Dans le champ answer, si une source contredit une valeur proposée dans la question, commence par « Non. » sans recopier la valeur erronée, puis indique uniquement la valeur documentée.",
   "Adresse-toi à la personne en la tutoyant.",
   "Retourne uniquement un objet JSON, sans Markdown ni texte autour.",
