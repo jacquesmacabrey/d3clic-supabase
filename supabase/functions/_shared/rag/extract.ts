@@ -21,9 +21,12 @@ export interface ExtractedDocument {
 function normalizeText(input: string): string {
   return input
     .replace(/\u0000/g, "")
+    .replace(/\u000b/g, "\n")
     .replace(/\r\n?/g, "\n")
+    .replace(/[\u00a0\u202f]/g, " ")
+    .replace(/[\uf0a7\uf0b7\uf0d8\uf0fc][\uf020 \t]*/gu, "• ")
     .split("\n")
-    .map((line) => line.replace(/[ \t]+$/g, ""))
+    .map((line) => line.replace(/[ \t]+/g, " ").trimEnd())
     .join("\n")
     .replace(/\n{4,}/g, "\n\n\n")
     .trim();
@@ -140,7 +143,7 @@ async function extractDocx(bytes: Uint8Array): Promise<ExtractedDocument> {
       pageCount: null,
       characterCount: text.length,
       extractionMethod: "mammoth",
-      extractionVersion: "1.8.0",
+      extractionVersion: "1.8.0/d3clic-normalize-2",
     };
   } catch (error) {
     if (error instanceof RagError) throw error;

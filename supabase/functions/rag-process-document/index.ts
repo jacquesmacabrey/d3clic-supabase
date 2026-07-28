@@ -17,7 +17,12 @@ import {
   sha256Text,
 } from "../_shared/rag/common.ts";
 import { extractDocument } from "../_shared/rag/extract.ts";
-import { chunkDocument, type PassageDraft } from "../_shared/rag/chunk.ts";
+import {
+  chunkDocument,
+  OVERLAP_CHARACTERS,
+  type PassageDraft,
+  TARGET_CHARACTERS,
+} from "../_shared/rag/chunk.ts";
 import {
   EMBEDDING_BATCH_SIZE,
   EMBEDDING_DIMENSIONS,
@@ -26,7 +31,7 @@ import {
   vectorLiteral,
 } from "../_shared/rag/embeddings.ts";
 
-const FUNCTION_VERSION = "RAG-2-PROCESS-AUDIT-2026-07-23";
+const FUNCTION_VERSION = "RAG-2-PROCESS-STRUCTURE-2026-07-28";
 const MAX_JSON_BODY_BYTES = 4_096;
 
 interface StartedJob {
@@ -58,7 +63,7 @@ async function downloadSource(
   if (error || !data) {
     throw new RagError(
       "source_download_failed",
-      "Le fichier source n'a pas pu être téléchargé.",
+      "Le fichier source n'a pas pu Ãªtre tÃ©lÃ©chargÃ©.",
       502,
     );
   }
@@ -82,6 +87,7 @@ async function passagePayload(
   return drafts.map((draft, index) => ({
     chunk_index: draft.chunkIndex,
     content: draft.content,
+    token_count: draft.tokenCount,
     content_sha256: hashes[index],
     page_start: draft.pageStart,
     page_end: draft.pageEnd,
@@ -113,7 +119,7 @@ async function runIngestion(
     if (plan.success !== true) {
       throw new RagError(
         String(plan.status_code ?? "plan_failed"),
-        "Le plan d'ingestion n'a pas pu être enregistré.",
+        "Le plan d'ingestion n'a pas pu Ãªtre enregistrÃ©.",
         500,
       );
     }
@@ -139,7 +145,7 @@ async function runIngestion(
       if (saved.success !== true) {
         throw new RagError(
           String(saved.status_code ?? "batch_save_failed"),
-          "Un lot de passages n'a pas pu être enregistré.",
+          "Un lot de passages n'a pas pu Ãªtre enregistrÃ©.",
           500,
         );
       }
@@ -165,8 +171,12 @@ async function runIngestion(
           passage_count: drafts.length,
           embedding_model: EMBEDDING_MODEL,
           embedding_dimensions: EMBEDDING_DIMENSIONS,
-          chunk_target_characters: 4000,
-          chunk_overlap_characters: 500,
+          chunk_target_characters: TARGET_CHARACTERS,
+          chunk_overlap_characters: OVERLAP_CHARACTERS,
+          token_count_method: "estimated_utf8_bytes_div_4",
+          structural_order_normalized: drafts.some((draft) =>
+            draft.metadata.structural_order_normalized === true
+          ),
           ocr_used: false,
         },
       },
@@ -174,7 +184,7 @@ async function runIngestion(
     if (completed.success !== true) {
       throw new RagError(
         String(completed.status_code ?? "completion_failed"),
-        "L'ingestion n'a pas pu être finalisée.",
+        "L'ingestion n'a pas pu Ãªtre finalisÃ©e.",
         500,
       );
     }
@@ -236,7 +246,7 @@ Deno.serve(async (request: Request) => {
     ) {
       throw new RagError(
         "request_too_large",
-        "La requête est trop volumineuse.",
+        "La requÃªte est trop volumineuse.",
         413,
       );
     }
@@ -322,7 +332,7 @@ Deno.serve(async (request: Request) => {
         code,
         code === "retry_exhausted"
           ? "Le nombre maximal de tentatives est atteint."
-          : "L'ingestion ne peut pas démarrer.",
+          : "L'ingestion ne peut pas dÃ©marrer.",
         status,
       );
     }
@@ -339,7 +349,7 @@ Deno.serve(async (request: Request) => {
     ) {
       throw new RagError(
         "invalid_backend_response",
-        "Le serveur a renvoyé un job invalide.",
+        "Le serveur a renvoyÃ© un job invalide.",
         500,
       );
     }
