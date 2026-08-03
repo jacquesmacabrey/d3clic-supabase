@@ -100,6 +100,214 @@ begin
 end;
 $$;
 
+/*
+  Preuve négative dédiée au garde-fou catégoriel.
+
+  Le passage « mariage » contient bien la valeur 3 et l'unité « jours ».
+  Il est accepté pour la règle marriage, puis volontairement réutilisé comme
+  source d'une règle death_first_degree ayant elle aussi le résultat 3 jours.
+  Le seul défaut du second lien est donc la catégorie métier.
+*/
+do $$
+declare
+  v_template_version_id constant uuid :=
+    'f0a00000-0000-4000-8000-000000000002'::uuid;
+  v_institution_id text;
+  v_admin_user_uuid uuid;
+  v_document_id uuid := pg_catalog.gen_random_uuid();
+  v_rule_set_id uuid := pg_catalog.gen_random_uuid();
+  v_moving_passage_id uuid := pg_catalog.gen_random_uuid();
+  v_marriage_passage_id uuid := pg_catalog.gen_random_uuid();
+  v_default_rule_id uuid := pg_catalog.gen_random_uuid();
+  v_marriage_rule_id uuid := pg_catalog.gen_random_uuid();
+  v_mismatched_rule_id uuid := pg_catalog.gen_random_uuid();
+  v_group_id uuid;
+  v_moving_content constant text := 'Déménagement : 1 jour.';
+  v_marriage_content constant text :=
+    'Mariage ou partenariat enregistré : 3 jours.';
+  v_moving_sha256 text;
+  v_marriage_sha256 text;
+  v_integrity jsonb;
+  v_mismatch_count integer;
+  v_other_issue_count integer;
+begin
+  select s.institution_id, u.user_uuid
+  into v_institution_id, v_admin_user_uuid
+  from internal.rag_rule_sets s
+  join internal.users u on u.institution_id = s.institution_id
+  where s.status = 'validated'
+  order by s.created_at, u.user_uuid
+  limit 1;
+
+  if v_institution_id is null or v_admin_user_uuid is null then
+    raise exception
+      'Précondition de test absente : institution avec règle validée';
+  end if;
+
+  v_moving_sha256 := pg_catalog.md5(v_moving_content)
+    || pg_catalog.md5('rag-10-7:' || v_moving_content);
+  v_marriage_sha256 := pg_catalog.md5(v_marriage_content)
+    || pg_catalog.md5('rag-10-7:' || v_marriage_content);
+
+  insert into internal.rag_documents (
+    document_id, institution_id, document_key, title, category,
+    version_label, status, storage_path, original_file_name, mime_type,
+    file_size_bytes, file_sha256, extraction_method, extraction_version,
+    page_count, extraction_metadata, uploaded_by
+  ) values (
+    v_document_id, v_institution_id,
+    'rag-10-7-categorical-test-' || pg_catalog.replace(
+      v_document_id::text, '-', ''
+    ),
+    'Test transactionnel RAG-10.7', 'test', '1', 'ready',
+    v_institution_id || '/rag-10-7-categorical-test-'
+      || v_document_id::text || '.pdf',
+    'rag-10-7-categorical-test.pdf', 'application/pdf', 1,
+    pg_catalog.md5(v_document_id::text)
+      || pg_catalog.md5('rag-10-7:' || v_document_id::text),
+    'test_fixture', '1', 1,
+    pg_catalog.jsonb_build_object('test_fixture', true),
+    v_admin_user_uuid
+  );
+
+  insert into internal.rag_passages (
+    passage_id, document_id, institution_id, chunk_index, content,
+    content_sha256, page_start, page_end, source_reference, metadata
+  ) values
+    (
+      v_moving_passage_id, v_document_id, v_institution_id, 0,
+      v_moving_content, v_moving_sha256, 1, 1,
+      'Fixture déménagement',
+      pg_catalog.jsonb_build_object('test_fixture', true)
+    ),
+    (
+      v_marriage_passage_id, v_document_id, v_institution_id, 1,
+      v_marriage_content, v_marriage_sha256, 1, 1,
+      'Fixture mariage',
+      pg_catalog.jsonb_build_object('test_fixture', true)
+    );
+
+  insert into internal.rag_rule_sets (
+    rule_set_id, institution_id, document_id, rule_key,
+    aggregation_strategy, result_unit, status, created_by,
+    template_version_id, creation_origin
+  ) values (
+    v_rule_set_id, v_institution_id, v_document_id,
+    'fixed_duration_exceptional_leave_by_event',
+    'maximum_applicable_entitlement', 'days', 'proposed',
+    v_admin_user_uuid, v_template_version_id, 'manual_migration'
+  );
+
+  insert into internal.rag_rules (
+    rule_id, rule_set_id, document_id, institution_id,
+    template_version_id, outcome_value, is_default, display_order, label
+  ) values
+    (
+      v_default_rule_id, v_rule_set_id, v_document_id, v_institution_id,
+      v_template_version_id, 1, true, 10, 'Déménagement'
+    ),
+    (
+      v_marriage_rule_id, v_rule_set_id, v_document_id, v_institution_id,
+      v_template_version_id, 3, false, 20,
+      'Mariage ou partenariat enregistré'
+    ),
+    (
+      v_mismatched_rule_id, v_rule_set_id, v_document_id, v_institution_id,
+      v_template_version_id, 3, false, 30, 'Décès, 1er degré'
+    );
+
+  insert into internal.rag_rule_sources (
+    rule_id, rule_set_id, passage_id, document_id, institution_id,
+    template_version_id, passage_content_sha256
+  ) values
+    (
+      v_default_rule_id, v_rule_set_id, v_moving_passage_id,
+      v_document_id, v_institution_id, v_template_version_id,
+      v_moving_sha256
+    ),
+    (
+      v_marriage_rule_id, v_rule_set_id, v_marriage_passage_id,
+      v_document_id, v_institution_id, v_template_version_id,
+      v_marriage_sha256
+    ),
+    (
+      v_mismatched_rule_id, v_rule_set_id, v_marriage_passage_id,
+      v_document_id, v_institution_id, v_template_version_id,
+      v_marriage_sha256
+    );
+
+  v_group_id := pg_catalog.gen_random_uuid();
+  insert into internal.rag_rule_condition_groups (
+    condition_group_id, rule_id, rule_set_id, document_id,
+    institution_id, template_version_id, display_order
+  ) values (
+    v_group_id, v_marriage_rule_id, v_rule_set_id, v_document_id,
+    v_institution_id, v_template_version_id, 10
+  );
+  insert into internal.rag_rule_conditions (
+    condition_group_id, rule_id, rule_set_id, document_id,
+    institution_id, template_version_id, fact_key, comparator,
+    fact_value_type, category_value
+  ) values (
+    v_group_id, v_marriage_rule_id, v_rule_set_id, v_document_id,
+    v_institution_id, v_template_version_id, 'leave_reason', '=',
+    'category', 'marriage'
+  );
+
+  v_group_id := pg_catalog.gen_random_uuid();
+  insert into internal.rag_rule_condition_groups (
+    condition_group_id, rule_id, rule_set_id, document_id,
+    institution_id, template_version_id, display_order
+  ) values (
+    v_group_id, v_mismatched_rule_id, v_rule_set_id, v_document_id,
+    v_institution_id, v_template_version_id, 10
+  );
+  insert into internal.rag_rule_conditions (
+    condition_group_id, rule_id, rule_set_id, document_id,
+    institution_id, template_version_id, fact_key, comparator,
+    fact_value_type, category_value
+  ) values (
+    v_group_id, v_mismatched_rule_id, v_rule_set_id, v_document_id,
+    v_institution_id, v_template_version_id, 'leave_reason', '=',
+    'category', 'death_first_degree'
+  );
+
+  if v_marriage_content !~ '(^|[^0-9])3([^0-9]|$)'
+     or pg_catalog.lower(v_marriage_content)
+          !~ '(^|[^[:alpha:]])jours?([^[:alpha:]]|$)'
+  then
+    raise exception
+      'Fixture invalide : la valeur 3 et l''unité jours doivent être présentes';
+  end if;
+
+  v_integrity := internal.inspect_rag_rule_set_integrity(v_rule_set_id);
+
+  select pg_catalog.count(*) into v_mismatch_count
+  from pg_catalog.jsonb_array_elements(
+    v_integrity->'blocking_issues'
+  ) issue
+  where issue->>'code' = 'categorical_source_mismatch'
+    and issue->>'rule_id' = v_mismatched_rule_id::text;
+
+  select pg_catalog.count(*) into v_other_issue_count
+  from pg_catalog.jsonb_array_elements(
+    v_integrity->'blocking_issues'
+  ) issue
+  where not (
+    issue->>'code' = 'categorical_source_mismatch'
+    and issue->>'rule_id' = v_mismatched_rule_id::text
+  );
+
+  if (v_integrity->>'valid')::boolean is not false
+     or v_mismatch_count <> 1
+     or v_other_issue_count <> 0
+  then
+    raise exception
+      'Garde-fou catégoriel non prouvé : %', v_integrity;
+  end if;
+end;
+$$;
+
 do $$
 declare
   v_rule_id uuid;
