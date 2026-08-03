@@ -412,7 +412,8 @@ enabled = true
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
-[functions.rag-answer-question]
+
+[functions.rag-process-document]
 verify_jwt = false
 # À intégrer à la fin de supabase/config.toml.
 # L'authentification est vérifiée dans common.ts avec auth.getUser(),

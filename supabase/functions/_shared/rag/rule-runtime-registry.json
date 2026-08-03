@@ -1,0 +1,34 @@
+[
+  {
+    "keyType": "aggregation_strategy",
+    "runtimeKey": "maximum_applicable_entitlement"
+  },
+  {
+    "keyType": "fact_extractor",
+    "runtimeKey": "age_years_fr_v1"
+  },
+  {
+    "keyType": "fact_extractor",
+    "runtimeKey": "leave_reason_fr_v1"
+  },
+  {
+    "keyType": "fact_extractor",
+    "runtimeKey": "service_years_fr_v1"
+  },
+  {
+    "keyType": "intent_detector",
+    "runtimeKey": "annual_leave_intent_v1"
+  },
+  {
+    "keyType": "intent_detector",
+    "runtimeKey": "exceptional_leave_intent_v1"
+  },
+  {
+    "keyType": "renderer",
+    "runtimeKey": "annual_leave_answer_fr_v1"
+  },
+  {
+    "keyType": "renderer",
+    "runtimeKey": "exceptional_leave_answer_fr_v1"
+  }
+]

@@ -37,6 +37,7 @@ interface StructuralBlock {
   text: string;
   heading: DetectedHeading | null;
   sourceIndex: number;
+  listFragmentIndex: number | null;
 }
 
 function preferredBreak(window: string): number {
@@ -92,6 +93,8 @@ function isTerminalListItem(line: string): boolean {
   return /[;,]$/.test(line);
 }
 
+const LETTERED_LIST_ITEM_PATTERN = /^[a-zà-öø-ÿ]\s*[-–—.)]\s+\S/u;
+
 function detectHeading(lineValue: string): DetectedHeading | null {
   const line = cleanLine(lineValue);
   if (line.length < 3 || line.length > 140) return null;
@@ -99,7 +102,7 @@ function detectHeading(lineValue: string): DetectedHeading | null {
   // Lowercase lettered items such as "a) ...", "b) ..." and "c) ..." are
   // deliberately not treated as headings. In legal and HR documents they are
   // much more often list items than structural titles.
-  if (/^[a-zà-öø-ÿ]\s*[-–—.)]\s+\S/u.test(line)) return null;
+  if (LETTERED_LIST_ITEM_PATTERN.test(line)) return null;
 
   if (
     /^(?:titre|chapitre|section|sous-section|partie|livre|annexe|appendice)\b/iu
@@ -173,6 +176,7 @@ function splitIntoStructuralBlocks(text: string): StructuralBlock[] {
         text: content,
         heading,
         sourceIndex: blocks.length,
+        listFragmentIndex: null,
       });
     }
     lines = [];
@@ -193,6 +197,55 @@ function splitIntoStructuralBlocks(text: string): StructuralBlock[] {
 
   return blocks;
 }
+
+function isListBoundaryLine(lineValue: string): boolean {
+  const line = cleanLine(lineValue);
+  // Contrairement à un titre, une clause de liste (« c) décès d'un parent
+  // ou allié au 2e degré : 2 jours (grands-parents, ...) ») peut
+  // légitimement dépasser largement la longueur d'un titre — seule une
+  // borne minimale est nécessaire ici, pour éviter de réagir à une ligne
+  // vide ou à du bruit d'extraction.
+  if (line.length < 3) return false;
+  return LETTERED_LIST_ITEM_PATTERN.test(line);
+}
+
+/**
+ * A lettered list item ("a) ...", "b) ...") is deliberately never treated
+ * as a heading (see detectHeading above) because in legal and HR documents
+ * it is far more often a list item than a structural title. Left
+ * unhandled, a whole list of lettered items under the same heading stays
+ * a single passage — which risks wrongly protecting unrelated items that
+ * share that passage once one of them backs a validated numeric rule
+ * (see RAG-10.1.1). This step creates a passage boundary at each lettered
+ * item without ever touching `heading`, so `sectionTitle` stays identical
+ * across every resulting fragment — only the passage boundaries change.
+ */
+function splitBlockByListBoundaries(
+  block: StructuralBlock,
+): StructuralBlock[] {
+  const lines = block.text.split(/\r?\n/);
+  const fragments: string[][] = [];
+  let current: string[] = [];
+
+  for (const rawLine of lines) {
+    if (isListBoundaryLine(rawLine) && current.length > 0) {
+      fragments.push(current);
+      current = [];
+    }
+    current.push(rawLine);
+  }
+  if (current.length > 0) fragments.push(current);
+
+  if (fragments.length <= 1) return [block];
+
+  return fragments.map((fragmentLines, fragmentIndex) => ({
+    text: fragmentLines.join("\n").trim(),
+    heading: block.heading,
+    sourceIndex: block.sourceIndex,
+    listFragmentIndex: fragmentIndex,
+  }));
+}
+
 
 interface SequenceHeading {
   family: string;
@@ -333,9 +386,12 @@ export function chunkDocument(
 
   extracted.segments.forEach((segment, segmentIndex) => {
     const detectedBlocks = splitIntoStructuralBlocks(segment.text);
-    const structuralBlocks = extracted.extractionMethod === "mammoth"
+    const orderedBlocks = extracted.extractionMethod === "mammoth"
       ? normalizeConsecutiveHeadingOrder(detectedBlocks)
       : detectedBlocks;
+    const structuralBlocks = orderedBlocks.flatMap((block) =>
+      splitBlockByListBoundaries(block)
+    );
     structuralBlocks.forEach((block, structuralBlockIndex) => {
       if (block.heading) currentHeading = block.heading;
 
@@ -370,6 +426,7 @@ export function chunkDocument(
             overlap_characters: blockChunkIndex > 0 ? OVERLAP_CHARACTERS : 0,
             structural_order_normalized:
               block.sourceIndex !== structuralBlockIndex,
+            list_fragment_index: block.listFragmentIndex,
             section_heading_source: block.heading ? "detected" : currentHeading
               ? "carried"
               : "none",

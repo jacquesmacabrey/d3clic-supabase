@@ -26,8 +26,13 @@ import {
 } from "../_shared/rag/embeddings.ts";
 import { RagError } from "../_shared/rag/errors.ts";
 import {
+  DETERMINISTIC_INTENT_CONFIDENCE_THRESHOLD,
+  DETERMINISTIC_RULE_REQUIRED_MESSAGE,
+  detectTemplateIntent,
   evaluateValidatedRuleSets,
-  parseValidatedRuleSets,
+  parseRuleContext,
+  runtimeRegistryMismatch,
+  type RuleContext,
 } from "../_shared/rag/deterministic-rules.ts";
 import { routeGenericLeaveQuestion } from "../_shared/rag/question-routing.ts";
 import {
@@ -39,7 +44,8 @@ import {
   type TokenUsage,
 } from "../_shared/rag/generation.ts";
 
-const FUNCTION_VERSION = "RAG-8.4-GENERIC-ROUTING-AND-NUMERIC-VALIDATION-2026-07-29";
+const FUNCTION_VERSION =
+  "RAG-10.1.1-PROTECTED-PASSAGE-UNIT-FIX-2026-07-30";
 const MAX_JSON_BODY_BYTES = 16 * 1024;
 const MAX_LOG_DURATION_MS = 300_000;
 
@@ -305,6 +311,71 @@ function noSourcesForStatus(statusCode: string): ValidatedAnswer | null {
   return null;
 }
 
+async function loadRuleContext(
+  admin: SupabaseClient,
+  authUid: string,
+  templateKey: string | null,
+  passageIds: string[],
+): Promise<{ context: RuleContext; statusCode: string }> {
+  const lookup = await callRpc(
+    admin,
+    "get_rag_rule_context_wrapper",
+    {
+      p_auth_uid: authUid,
+      p_template_key: templateKey,
+      p_passage_ids: passageIds,
+    },
+  );
+  const statusCode = String(
+    lookup.status_code ?? "rule_lookup_failed",
+  );
+  if (
+    lookup.success !== true ||
+    !["ok", "no_validated_rule_set"].includes(statusCode)
+  ) {
+    if (statusCode === "access_denied") {
+      throw new RagError(
+        "device_not_activated",
+        "Cet appareil n'est pas activé.",
+        403,
+      );
+    }
+    throw new RagError(
+      "deterministic_rule_lookup_failed",
+      "La vérification des règles métier est indisponible.",
+      500,
+    );
+  }
+  const context = parseRuleContext(
+    lookup.rule_sets,
+    lookup.protected_passage_ids,
+  );
+  if (context === null) {
+    throw new RagError(
+      "invalid_backend_response",
+      "Réponse serveur invalide.",
+      500,
+    );
+  }
+  return { context, statusCode };
+}
+
+function firstRegistryMismatch(context: RuleContext): {
+  templateVersionId: string;
+  runtimeKey: string;
+} | null {
+  for (const ruleSet of context.ruleSets) {
+    const runtimeKey = runtimeRegistryMismatch(ruleSet.template);
+    if (runtimeKey !== null) {
+      return {
+        templateVersionId: ruleSet.templateVersionId,
+        runtimeKey,
+      };
+    }
+  }
+  return null;
+}
+
 Deno.serve(async (request: Request) => {
   const requestId = resolveRequestId(request);
   const startedAt = performance.now();
@@ -419,6 +490,79 @@ Deno.serve(async (request: Request) => {
       );
     }
 
+    const templateIntent = detectTemplateIntent(question);
+    if (
+      templateIntent !== null &&
+      templateIntent.confidence >=
+        DETERMINISTIC_INTENT_CONFIDENCE_THRESHOLD
+    ) {
+      stepStartedAt = performance.now();
+      const earlyLookup = await loadRuleContext(
+        admin,
+        authUid,
+        templateIntent.templateKey,
+        [],
+      );
+      log(
+        "deterministic_preflight",
+        200,
+        earlyLookup.statusCode,
+        stepStartedAt,
+      );
+
+      const mismatch = firstRegistryMismatch(earlyLookup.context);
+      if (mismatch !== null) {
+        console.error(JSON.stringify({
+          requestId,
+          functionVersion: FUNCTION_VERSION,
+          event: "rag_runtime_registry_mismatch",
+          templateVersionId: mismatch.templateVersionId,
+          runtimeKey: mismatch.runtimeKey,
+        }));
+        const result = insufficientAnswer(
+          DETERMINISTIC_RULE_REQUIRED_MESSAGE,
+          "rag_runtime_registry_mismatch",
+          true,
+        );
+        await completeLog(
+          admin,
+          config,
+          state,
+          startedAt,
+          result.logResult,
+          result.errorCode,
+        );
+        log("completed", 200, result.errorCode);
+        return jsonResponse(
+          request,
+          requestId,
+          clientPayload(result.client, question),
+        );
+      }
+
+      if (earlyLookup.context.ruleSets.length === 0) {
+        const result = insufficientAnswer(
+          DETERMINISTIC_RULE_REQUIRED_MESSAGE,
+          "deterministic_rule_required",
+          true,
+        );
+        await completeLog(
+          admin,
+          config,
+          state,
+          startedAt,
+          result.logResult,
+          result.errorCode,
+        );
+        log("completed", 200, result.errorCode);
+        return jsonResponse(
+          request,
+          requestId,
+          clientPayload(result.client, question),
+        );
+      }
+    }
+
     stepStartedAt = performance.now();
     const queryVector = await embedQuestion(question);
     log("embedding", 200, null, stepStartedAt);
@@ -503,44 +647,50 @@ Deno.serve(async (request: Request) => {
     }
 
     stepStartedAt = performance.now();
-    const ruleLookup = await callRpc(
+    const ruleLookup = await loadRuleContext(
       admin,
-      "get_validated_rag_rule_sets_wrapper",
-      {
-        p_auth_uid: authUid,
-        p_rule_key: null,
-        p_passage_ids: context.included.map((passage) => passage.passageId),
-      },
+      authUid,
+      templateIntent?.templateKey ?? null,
+      context.included.map((passage) => passage.passageId),
     );
-    const ruleLookupStatus = String(
-      ruleLookup.status_code ?? "rule_lookup_failed",
+    const ruleSets = ruleLookup.context.ruleSets;
+    const protectedPassages = ruleLookup.context.protectedPassages;
+    log(
+      "deterministic_lookup",
+      200,
+      ruleLookup.statusCode,
+      stepStartedAt,
     );
-    if (
-      ruleLookup.success !== true ||
-      !["ok", "no_validated_rule_set"].includes(ruleLookupStatus)
-    ) {
-      if (ruleLookupStatus === "access_denied") {
-        throw new RagError(
-          "device_not_activated",
-          "Cet appareil n'est pas activé.",
-          403,
-        );
-      }
-      throw new RagError(
-        "deterministic_rule_lookup_failed",
-        "La vérification des règles métier est indisponible.",
-        500,
+
+    const runtimeMismatch = firstRegistryMismatch(ruleLookup.context);
+    if (runtimeMismatch !== null) {
+      console.error(JSON.stringify({
+        requestId,
+        functionVersion: FUNCTION_VERSION,
+        event: "rag_runtime_registry_mismatch",
+        templateVersionId: runtimeMismatch.templateVersionId,
+        runtimeKey: runtimeMismatch.runtimeKey,
+      }));
+      const result = insufficientAnswer(
+        DETERMINISTIC_RULE_REQUIRED_MESSAGE,
+        "rag_runtime_registry_mismatch",
+        true,
+      );
+      await completeLog(
+        admin,
+        config,
+        state,
+        startedAt,
+        result.logResult,
+        result.errorCode,
+      );
+      log("completed", 200, result.errorCode);
+      return jsonResponse(
+        request,
+        requestId,
+        clientPayload(result.client, question),
       );
     }
-    const ruleSets = parseValidatedRuleSets(ruleLookup.rule_sets);
-    if (ruleSets === null) {
-      throw new RagError(
-        "invalid_backend_response",
-        "Réponse serveur invalide.",
-        500,
-      );
-    }
-    log("deterministic_lookup", 200, ruleLookupStatus, stepStartedAt);
 
     const deterministic = evaluateValidatedRuleSets(question, ruleSets);
     if (deterministic !== null) {
@@ -595,6 +745,7 @@ Deno.serve(async (request: Request) => {
       generation.answer,
       context.included,
       ruleSets,
+      protectedPassages,
     );
     log("validation", 200, result.errorCode, stepStartedAt);
 
