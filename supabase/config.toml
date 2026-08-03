@@ -413,8 +413,6 @@ enabled = true
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
 
-[functions.rag-process-document]
-verify_jwt = false
 # À intégrer à la fin de supabase/config.toml.
 # L'authentification est vérifiée dans common.ts avec auth.getUser(),
 # puis les droits admin sont contrôlés par check_backoffice_role_wrapper.
@@ -426,4 +424,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.rag-admin-documents]
+verify_jwt = false
+
+[functions.rag-admin-rules]
 verify_jwt = false

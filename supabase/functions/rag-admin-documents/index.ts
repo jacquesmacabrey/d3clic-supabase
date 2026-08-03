@@ -79,6 +79,8 @@ function messageFor(code: string): string {
       "La suppression définitive doit être confirmée.",
     document_has_validated_rules:
       "Ce document est utilisé par une règle validée et ne peut pas être supprimé. Charge et active une nouvelle version, puis fais recréer et valider les règles qui utilisent l’ancienne version avant de supprimer celle-ci.",
+    document_has_protected_rules:
+      "Ce document contient une règle en cours de vérification, approuvée ou active. Termine ou rejette cette règle avant de supprimer le document.",
     active_confirmation_required:
       "Le titre exact du document actif doit être confirmé.",
   };
@@ -93,6 +95,7 @@ function statusFor(code: string): number {
     code === "document_not_active" ||
     code === "ingestion_in_progress" ||
     code === "document_has_validated_rules" ||
+    code === "document_has_protected_rules" ||
     code === "active_confirmation_required"
   ) {
     return 409;
