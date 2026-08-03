@@ -168,6 +168,130 @@ function repairModelJson(text: string): string | null {
   return candidate ? escapeControlCharactersInJsonStrings(candidate) : null;
 }
 
+function jsonValueKind(value: unknown): string {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "array";
+  return typeof value;
+}
+
+function isProbeUuid(value: unknown): value is string {
+  return typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      .test(value);
+}
+
+/**
+ * Décrit uniquement la forme d'une sortie refusée. Aucune valeur textuelle,
+ * aucun identifiant et aucun contenu documentaire ne sont journalisés.
+ */
+export function safeModelOutputProbe(
+  text: string,
+): Record<string, unknown> {
+  const repairedJson = repairModelJson(text);
+  let candidate = "none";
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(text);
+    candidate = "raw";
+  } catch {
+    if (repairedJson !== null) {
+      try {
+        parsed = JSON.parse(repairedJson);
+        candidate = "embedded";
+      } catch {
+        // Le diagnostic reste volontairement structurel.
+      }
+    }
+  }
+
+  if (candidate === "none") {
+    return {
+      candidate,
+      contractIssue: "syntax_invalid",
+      rootKind: "invalid",
+    };
+  }
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return {
+      candidate,
+      contractIssue: "root_invalid",
+      rootKind: jsonValueKind(parsed),
+    };
+  }
+
+  const row = parsed as Record<string, unknown>;
+  const expectedFields = new Set([
+    "answer",
+    "needs_human_review",
+    "result",
+    "used_passage_ids",
+  ]);
+  const keys = Object.keys(row);
+  const expectedFieldCount = keys.filter((key) =>
+    expectedFields.has(key)
+  ).length;
+  const extraFieldCount = keys.length - expectedFieldCount;
+  const ids = row.used_passage_ids;
+  const usedPassageIdCount = Array.isArray(ids) ? ids.length : null;
+  const validPassageIdCount = Array.isArray(ids)
+    ? ids.filter(isProbeUuid).length
+    : null;
+  const validResults = new Set([
+    "supported",
+    "insufficient_sources",
+    "conflicting_sources",
+    "needs_clarification",
+  ]);
+  const resultCategory = validResults.has(String(row.result))
+    ? row.result
+    : "other";
+  let contractIssue = "unexpected_acceptance";
+
+  if (row.result === "insufficient_sources") {
+  } else if (keys.length !== 4 || expectedFieldCount !== 4) {
+    contractIssue = "fields_invalid";
+  } else if (resultCategory === "other") {
+    contractIssue = "result_invalid";
+  } else if (
+    typeof row.answer !== "string" ||
+    row.answer.trim().length < 1 ||
+    row.answer.trim().length > 4_000
+  ) {
+    contractIssue = "answer_invalid";
+  } else if (
+    !Array.isArray(ids) ||
+    ids.length > 20 ||
+    validPassageIdCount !== ids.length
+  ) {
+    contractIssue = "used_passage_ids_invalid";
+  } else if (typeof row.needs_human_review !== "boolean") {
+    contractIssue = "needs_human_review_invalid";
+  } else if (
+    ((resultCategory === "needs_clarification") && ids.length !== 0) ||
+    (resultCategory !== "needs_clarification" && ids.length === 0)
+  ) {
+    contractIssue = "citation_cardinality_invalid";
+  }
+
+  return {
+    candidate,
+    contractIssue,
+    rootKind: "object",
+    expectedFieldCount,
+    extraFieldCount,
+    resultKind: jsonValueKind(row.result),
+    resultCategory,
+    answerKind: jsonValueKind(row.answer),
+    answerLength: typeof row.answer === "string" ? row.answer.length : null,
+    usedPassageIdsKind: jsonValueKind(ids),
+    usedPassageIdCount,
+    validPassageIdCount,
+    needsHumanReviewKind: jsonValueKind(row.needs_human_review),
+  };
+}
+
 function hasMissingOrEmptyClarificationAnswer(
   text: string,
   repairedJson: string | null,
@@ -408,6 +532,7 @@ export async function generateStructuredAnswer(
         textLength: generated.text.length,
         repairAttempted:
           repairedJson !== null && repairedJson !== generated.text,
+        outputProbe: safeModelOutputProbe(generated.text),
       });
 
       previousInvalidText = generated.text.slice(0, 8_000);

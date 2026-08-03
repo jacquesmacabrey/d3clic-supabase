@@ -63,7 +63,7 @@ async function downloadSource(
   if (error || !data) {
     throw new RagError(
       "source_download_failed",
-      "Le fichier source n'a pas pu être téléchargé.",
+      "Le fichier source n'a pas pu Ãªtre tÃ©lÃ©chargÃ©.",
       502,
     );
   }
@@ -119,7 +119,7 @@ async function runIngestion(
     if (plan.success !== true) {
       throw new RagError(
         String(plan.status_code ?? "plan_failed"),
-        "Le plan d'ingestion n'a pas pu être enregistré.",
+        "Le plan d'ingestion n'a pas pu Ãªtre enregistrÃ©.",
         500,
       );
     }
@@ -145,7 +145,7 @@ async function runIngestion(
       if (saved.success !== true) {
         throw new RagError(
           String(saved.status_code ?? "batch_save_failed"),
-          "Un lot de passages n'a pas pu être enregistré.",
+          "Un lot de passages n'a pas pu Ãªtre enregistrÃ©.",
           500,
         );
       }
@@ -184,7 +184,7 @@ async function runIngestion(
     if (completed.success !== true) {
       throw new RagError(
         String(completed.status_code ?? "completion_failed"),
-        "L'ingestion n'a pas pu être finalisée.",
+        "L'ingestion n'a pas pu Ãªtre finalisÃ©e.",
         500,
       );
     }
@@ -246,7 +246,7 @@ Deno.serve(async (request: Request) => {
     ) {
       throw new RagError(
         "request_too_large",
-        "La requête est trop volumineuse.",
+        "La requÃªte est trop volumineuse.",
         413,
       );
     }
@@ -332,7 +332,7 @@ Deno.serve(async (request: Request) => {
         code,
         code === "retry_exhausted"
           ? "Le nombre maximal de tentatives est atteint."
-          : "L'ingestion ne peut pas démarrer.",
+          : "L'ingestion ne peut pas dÃ©marrer.",
         status,
       );
     }
@@ -349,7 +349,7 @@ Deno.serve(async (request: Request) => {
     ) {
       throw new RagError(
         "invalid_backend_response",
-        "Le serveur a renvoyé un job invalide.",
+        "Le serveur a renvoyÃ© un job invalide.",
         500,
       );
     }

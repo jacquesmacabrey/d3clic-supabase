@@ -1,7 +1,9 @@
 import { RagError } from "./errors.ts";
-import type {
-  PublicDeterministicAnswer,
-  ValidatedRuleSet,
+import {
+  DETERMINISTIC_RULE_REQUIRED_MESSAGE,
+  type ProtectedPassage,
+  type PublicDeterministicAnswer,
+  type ValidatedRuleSet,
 } from "./deterministic-rules.ts";
 
 export type ModelAnswerResult =
@@ -131,15 +133,13 @@ function containsNumericExpressionWithRuleUnit(
   resultUnit: ValidatedRuleSet["resultUnit"],
 ): boolean {
   const tokens = numericTokens(value);
-  switch (resultUnit) {
-    case "days":
-      return tokens.some(
-        (token) =>
-          token.endsWith("|jour") ||
-          token.endsWith("|jours") ||
-          /^words\|.*\sjours?$/.test(token),
-      );
-  }
+  if (resultUnit !== "days") return false;
+  return tokens.some(
+    (token) =>
+      token.endsWith("|jour") ||
+      token.endsWith("|jours") ||
+      /^words\|.*\sjours?$/.test(token),
+  );
 }
 
 function deterministicRuleRequiredForAnswer(
@@ -740,6 +740,12 @@ export function validateDeterministicAnswerAgainstSources(
     uniqueIds.length === 0 ||
     uniqueIds.some((passageId) => !whitelist.has(passageId))
   ) {
+    console.error("invalid_deterministic_citation_diagnostic", {
+      requiredPassageIds: uniqueIds,
+      missingPassageIds: uniqueIds.filter((id) => !whitelist.has(id)),
+      contextPassageIds: [...whitelist.keys()],
+      contextPassageCount: whitelist.size,
+    });
     return insufficientAnswer(
       "Je ne peux pas déterminer ce droit de manière suffisamment fiable à partir des informations disponibles.",
       "invalid_deterministic_citation",
@@ -767,6 +773,7 @@ export function validateAnswerAgainstSources(
   answer: ModelAnswer,
   sources: SearchPassage[],
   ruleSets: ValidatedRuleSet[] = [],
+  protectedPassages: ProtectedPassage[] = [],
 ): ValidatedAnswer {
   if (answer.result === "insufficient_sources") {
     return insufficientAnswer();
@@ -808,6 +815,30 @@ export function validateAnswerAgainstSources(
     citation(whitelist.get(passageId)!, answer.answer),
   );
   const citedSources = uniqueIds.map((passageId) => whitelist.get(passageId)!);
+  const citedIdSet = new Set(uniqueIds);
+  const citedProtectedUnits = new Set(
+    protectedPassages
+      .filter((protectedPassage) => citedIdSet.has(protectedPassage.passageId))
+      .map((protectedPassage) => protectedPassage.resultUnit),
+  );
+  if (citedProtectedUnits.size > 0) {
+    const matchesProtectedUnit = [...citedProtectedUnits].some((unit) =>
+      containsNumericExpressionWithRuleUnit(answer.answer, unit)
+    );
+    // Une affirmation sans aucun nombre reste bloquée par prudence : elle
+    // peut encore laisser entendre qu'une disposition conditionnelle
+    // s'applique, sans jamais avoir été validée par le moteur déterministe.
+    // Un nombre présent mais dans une autre unité (ex. des heures sur un
+    // passage qui protège aussi une règle en jours) porte sur une autre
+    // disposition du même passage et n'a pas besoin d'être bloqué.
+    if (!containsNumericExpression(answer.answer) || matchesProtectedUnit) {
+      return insufficientAnswer(
+        DETERMINISTIC_RULE_REQUIRED_MESSAGE,
+        "deterministic_rule_required",
+        true,
+      );
+    }
+  }
   if (!numericClaimsAreGrounded(answer.answer, citedSources)) {
     return insufficientAnswer(
       "Je ne peux pas confirmer cette valeur à partir des passages cités.",
@@ -823,7 +854,7 @@ export function validateAnswerAgainstSources(
     )
   ) {
     return insufficientAnswer(
-      "Je ne peux pas confirmer cette valeur sans appliquer la règle métier validée.",
+      DETERMINISTIC_RULE_REQUIRED_MESSAGE,
       "deterministic_rule_required",
       true,
     );
