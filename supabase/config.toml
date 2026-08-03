@@ -415,3 +415,15 @@ enabled = true
 
 [functions.rag-process-document]
 verify_jwt = false
+# À intégrer à la fin de supabase/config.toml.
+# L'authentification est vérifiée dans common.ts avec auth.getUser(),
+# puis les droits admin sont contrôlés par check_backoffice_role_wrapper.
+
+[functions.rag-upload-document]
+verify_jwt = false
+
+[functions.rag-process-document]
+verify_jwt = false
+
+[functions.rag-admin-documents]
+verify_jwt = false
