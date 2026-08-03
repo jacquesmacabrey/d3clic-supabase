@@ -1,6 +1,6 @@
 # RAG-10.7 — administration des règles
 
-Branche de travail : `rag-10-7-admin-rules`.
+Branche de travail : `rag-10-7-admin-rules-main`.
 
 ## Contenu
 
@@ -25,21 +25,32 @@ node --test tests/rag/*.test.ts
 ```
 
 La migration et le test SQL passent un parseur combiné PostgreSQL + PL/pgSQL.
-L’exécution SQL réelle exige le staging Supabase, car Docker n’est pas présent
-dans l’environnement de préparation.
+Le test SQL complet a également été exécuté avec succès sur le staging
+Supabase ; toutes ses mutations sont annulées par `ROLLBACK`.
 
 Le test SQL construit notamment une règle « décès, 1er degré : 3 jours »
 volontairement sourcée sur un passage « mariage : 3 jours ». Il exige le code
 `categorical_source_mismatch`, tout en vérifiant que la même source est valide
 pour la catégorie `marriage`.
 
-## Avant déploiement
+## Statut du staging au 3 août 2026
 
-1. Comparer cette branche avec le `main` GitHub synchronisé après RAG-10.6b.
-2. Confirmer l’absence de différences non prévues dans les fichiers existants.
-3. Faire auditer la migration et l’Edge Function.
-4. Déployer uniquement en staging avec `scripts/deploy-rag-10-7-staging.ps1`.
-5. Exécuter `tests/sql/rag-10-7-admin-workflow.test.sql`.
-6. Réaliser la recette croisée entre deux institutions.
+- branche transposée sur le `main` GitHub `c1c5b88` ;
+- audit technique terminé sans réserve ;
+- migration appliquée sur `d3clic-staging-auth` ;
+- Edge Function `rag-admin-rules` active en version 1 ;
+- effet indésirable du backfill corrigé : le trigger de cycle de vie est
+  neutralisé uniquement pendant le remplissage des empreintes de sources ;
+- deux jeux de règles rétablis en `validated` à partir des journaux historiques,
+  avec deux événements d’audit explicites ;
+- test SQL complet et 100 tests TypeScript réussis ;
+- aucune donnée de test conservée.
+
+## Étapes restantes
+
+1. Publier la branche sur GitHub et ouvrir la revue correspondante.
+2. Réaliser la recette fonctionnelle du back-office, notamment l’isolation
+   entre deux institutions.
+3. Décider séparément d’un éventuel déploiement en production.
 
 Aucun déploiement en production n’est inclus ni autorisé par ce paquet.
