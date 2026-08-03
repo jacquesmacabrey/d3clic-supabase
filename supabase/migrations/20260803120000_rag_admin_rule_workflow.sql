@@ -222,12 +222,21 @@ create index rag_rule_sets_parent_idx
 alter table internal.rag_rule_sources
   add column passage_content_sha256 text;
 
+-- Ce backfill est purement technique. L'ancien trigger de cycle de vie
+-- interprète toute mise à jour d'une source comme une correction métier et
+-- rétrograderait à tort les jeux déjà validés.
+alter table internal.rag_rule_sources
+  disable trigger rag_rule_sources_invalidate_rule_set;
+
 update internal.rag_rule_sources src
 set passage_content_sha256 = p.content_sha256
 from internal.rag_passages p
 where p.passage_id = src.passage_id
   and p.document_id = src.document_id
   and p.institution_id = src.institution_id;
+
+alter table internal.rag_rule_sources
+  enable trigger rag_rule_sources_invalidate_rule_set;
 
 do $$
 begin
@@ -416,14 +425,9 @@ declare
   v_has_signature boolean;
   v_has_grounded_source boolean;
 begin
-  select s, d.status, tv.status
-  into v_set, v_document_status, v_template_status
+  select s.*
+  into v_set
   from internal.rag_rule_sets s
-  join internal.rag_documents d
-    on d.document_id = s.document_id
-   and d.institution_id = s.institution_id
-  join internal.rag_rule_template_versions tv
-    on tv.template_version_id = s.template_version_id
   where s.rule_set_id = p_rule_set_id;
 
   if not found then
@@ -436,6 +440,14 @@ begin
       'checked_revision_number', null
     );
   end if;
+
+  select d.status, tv.status
+  into v_document_status, v_template_status
+  from internal.rag_documents d
+  join internal.rag_rule_template_versions tv
+    on tv.template_version_id = v_set.template_version_id
+  where d.document_id = v_set.document_id
+    and d.institution_id = v_set.institution_id;
 
   if v_document_status not in ('ready', 'active') then
     v_issues := v_issues || pg_catalog.jsonb_build_array(

@@ -135,13 +135,12 @@ begin
   into v_institution_id, v_admin_user_uuid
   from internal.rag_rule_sets s
   join internal.users u on u.institution_id = s.institution_id
-  where s.status = 'validated'
   order by s.created_at, u.user_uuid
   limit 1;
 
   if v_institution_id is null or v_admin_user_uuid is null then
     raise exception
-      'Précondition de test absente : institution avec règle validée';
+      'Précondition de test absente : institution avec utilisateur';
   end if;
 
   v_moving_sha256 := pg_catalog.md5(v_moving_content)
