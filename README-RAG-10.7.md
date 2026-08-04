@@ -4,7 +4,7 @@ Branche de travail : `rag-10-7-admin-rules-main`.
 
 ## Contenu
 
-- migration `20260803120000_rag_admin_rule_workflow.sql` ;
+- migration `20260803123935_rag_admin_rule_workflow.sql` ;
 - Edge Function `rag-admin-rules` ;
 - contrats stricts, présentation métier et simulation isolée ;
 - tests TypeScript et postconditions SQL, dont un scénario négatif dédié au
@@ -48,11 +48,15 @@ pour la catégorie `marriage`.
 - test SQL complet et 107 tests TypeScript réussis ;
 - aucune donnée de test conservée.
 
+Les versions des migrations Git correspondent à l'historique du staging :
+`20260803123935` et `20260803135736`. La migration principale versionnée
+conserve en plus la neutralisation temporaire du trigger pendant le backfill.
+Cette protection a été ajoutée après la première exécution du staging pour
+éviter de reproduire l'invalidation indésirable lors d'un déploiement neuf.
+
 ## Étapes restantes
 
-1. Publier la branche sur GitHub et ouvrir la revue correspondante.
-2. Réaliser la recette fonctionnelle du back-office, notamment l’isolation
-   entre deux institutions.
-3. Décider séparément d’un éventuel déploiement en production.
+1. Terminer la revue de la PR nº3.
+2. Décider séparément d'un éventuel déploiement en production.
 
 Aucun déploiement en production n’est inclus ni autorisé par ce paquet.
