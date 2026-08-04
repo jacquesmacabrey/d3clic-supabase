@@ -45,7 +45,7 @@ import {
 } from "../_shared/rag/generation.ts";
 
 const FUNCTION_VERSION =
-  "RAG-10.1.1-PROTECTED-PASSAGE-UNIT-FIX-2026-07-30";
+  "RAG-10.7-EVENT-SUBJECT-FIX-2026-08-04";
 const MAX_JSON_BODY_BYTES = 16 * 1024;
 const MAX_LOG_DURATION_MS = 300_000;
 
