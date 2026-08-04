@@ -9,6 +9,8 @@ Branche de travail : `rag-10-7-admin-rules-main`.
 - contrats stricts, présentation métier et simulation isolée ;
 - tests TypeScript et postconditions SQL, dont un scénario négatif dédié au
   décalage catégoriel des sources ;
+- interface du back-office staging versionnée dans
+  `backoffice/rag-staging/index.html` ;
 - scripts de déploiement et de retour arrière staging.
 
 `rule-engine.ts` reste inchangé. Empreinte attendue :
@@ -21,7 +23,7 @@ eca639155e99bff7bdf8acdc28e6cecb52f13089fae5bb00f6d25e8b4bad3bcf
 
 ```text
 node --test tests/rag/*.test.ts
-100 tests réussis
+107 tests réussis
 ```
 
 La migration et le test SQL passent un parseur combiné PostgreSQL + PL/pgSQL.
@@ -43,7 +45,7 @@ pour la catégorie `marriage`.
   neutralisé uniquement pendant le remplissage des empreintes de sources ;
 - deux jeux de règles rétablis en `validated` à partir des journaux historiques,
   avec deux événements d’audit explicites ;
-- test SQL complet et 100 tests TypeScript réussis ;
+- test SQL complet et 107 tests TypeScript réussis ;
 - aucune donnée de test conservée.
 
 ## Étapes restantes

@@ -117,6 +117,55 @@ test("extractFacts reconnaît le motif mariage", () => {
   assert.equal(result.facts.leave_reason, "marriage");
 });
 
+test("le mariage d’un tiers n’est pas assimilé au mariage du collaborateur", () => {
+  const questions = [
+    "Je participe au mariage de mon frère",
+    "Ma sœur se marie le mois prochain",
+    "Quel congé pour le mariage de mon fils ?",
+    "Je suis invitée au mariage d’une amie",
+  ];
+  for (const question of questions) {
+    assert.deepEqual(detectTemplateIntent(question), {
+      templateKey: "fixed_duration_exceptional_leave_by_event",
+      confidence: 1,
+    }, question);
+    const extraction = extractFacts(question, exceptionalLeaveTemplate());
+    assert.equal(extraction.status, "ok", question);
+    assert.equal(extraction.facts.leave_reason, null, question);
+  }
+});
+
+test("extractFacts reconnaît le déménagement du collaborateur", () => {
+  const questions = [
+    "Je déménage la semaine prochaine",
+    "Je dois déménager en septembre",
+    "Mon déménagement est prévu vendredi",
+    "Nous allons déménager le mois prochain",
+  ];
+  for (const question of questions) {
+    const result = extractFacts(question, exceptionalLeaveTemplate());
+    assert.equal(result.status, "ok", question);
+    assert.equal(result.facts.leave_reason, "moving", question);
+  }
+});
+
+test("le déménagement d’un tiers n’est pas assimilé à celui du collaborateur", () => {
+  const questions = [
+    "Mon collègue déménage la semaine prochaine",
+    "J’aide ma sœur à déménager samedi",
+    "Je participe au déménagement de mon fils",
+  ];
+  for (const question of questions) {
+    assert.deepEqual(detectTemplateIntent(question), {
+      templateKey: "fixed_duration_exceptional_leave_by_event",
+      confidence: 1,
+    }, question);
+    const extraction = extractFacts(question, exceptionalLeaveTemplate());
+    assert.equal(extraction.status, "ok", question);
+    assert.equal(extraction.facts.leave_reason, null, question);
+  }
+});
+
 test("extractFacts reconnaît le décès au premier degré", () => {
   const result = extractFacts(
     "Décès de ma mère",
@@ -167,6 +216,30 @@ test("mariage résolu correctement de bout en bout", () => {
   const answer = renderResolution(resolution, ruleSet.template);
   assert.equal(answer?.result, "supported");
   assert.match(answer!.answer, /3 jours/);
+});
+
+test("le mariage d’un frère demande une clarification sans inventer de durée", () => {
+  const ruleSet = exceptionalLeaveRuleSet();
+  const extraction = extractFacts(
+    "Je participe au mariage de mon frère. À combien de jours ai-je droit ?",
+    ruleSet.template,
+  );
+  const resolution = resolveValidatedRuleSet(ruleSet, extraction);
+  const answer = renderResolution(resolution, ruleSet.template);
+  assert.equal(answer?.result, "needs_clarification");
+  assert.doesNotMatch(answer!.answer, /3 jours/);
+});
+
+test("le déménagement d’un collègue demande une clarification sans attribuer un jour", () => {
+  const ruleSet = exceptionalLeaveRuleSet();
+  const extraction = extractFacts(
+    "Mon collègue déménage. À combien de jours ai-je droit ?",
+    ruleSet.template,
+  );
+  const resolution = resolveValidatedRuleSet(ruleSet, extraction);
+  const answer = renderResolution(resolution, ruleSet.template);
+  assert.equal(answer?.result, "needs_clarification");
+  assert.doesNotMatch(answer!.answer, /1 jour/);
 });
 
 test("décès au premier degré résolu correctement de bout en bout", () => {

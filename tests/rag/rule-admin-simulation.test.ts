@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { simulateAdministrativeRuleSet } from "../../supabase/functions/_shared/rag/rule-admin-simulation.ts";
-import { annualLeaveRuleSet } from "./rule-fixtures.ts";
+import {
+  annualLeaveRuleSet,
+  exceptionalLeaveRuleSet,
+} from "./rule-fixtures.ts";
 
-function rawAnnualRuleSet() {
-  const set = annualLeaveRuleSet();
+function rawRuleSet(set = annualLeaveRuleSet()) {
   return {
     rule_set_id: set.ruleSetId,
     rule_key: set.ruleKey,
@@ -70,7 +72,7 @@ function rawAnnualRuleSet() {
 
 test("simule un brouillon sans modifier son statut persistant", () => {
   const result = simulateAdministrativeRuleSet(
-    rawAnnualRuleSet(),
+    rawRuleSet(),
     "proposed",
     "J’ai 58 ans et 10 ans de service, combien de jours de vacances ?",
   );
@@ -82,10 +84,32 @@ test("simule un brouillon sans modifier son statut persistant", () => {
 
 test("refuse une question destinée à un autre gabarit", () => {
   const result = simulateAdministrativeRuleSet(
-    rawAnnualRuleSet(),
+    rawRuleSet(),
     "needs_attention",
     "Je me marie, quel congé ai-je ?",
   );
   assert.equal(result.success, false);
   assert.equal(result.code, "question_outside_template");
+});
+
+test("la simulation n’accorde pas le congé de mariage pour le mariage d’un tiers", () => {
+  const result = simulateAdministrativeRuleSet(
+    rawRuleSet(exceptionalLeaveRuleSet()),
+    "validated",
+    "Je participe au mariage de mon frère. À combien de jours ai-je droit ?",
+  );
+  assert.equal(result.success, true);
+  assert.equal(result.code, "needs_clarification");
+  assert.doesNotMatch(result.answer ?? "", /3 jours/);
+});
+
+test("la simulation n’accorde pas un jour pour le déménagement d’un tiers", () => {
+  const result = simulateAdministrativeRuleSet(
+    rawRuleSet(exceptionalLeaveRuleSet()),
+    "validated",
+    "Mon collègue déménage. À combien de jours ai-je droit ?",
+  );
+  assert.equal(result.success, true);
+  assert.equal(result.code, "needs_clarification");
+  assert.doesNotMatch(result.answer ?? "", /1 jour/);
 });

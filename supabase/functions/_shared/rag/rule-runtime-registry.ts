@@ -217,20 +217,25 @@ function renderAnnualLeave(
 
 const EXCEPTIONAL_LEAVE_TOPIC_PATTERN =
   /\bconges?\s+(?:exceptionnels?|extraordinaires?)\b/;
-const MARRIAGE_KEYWORDS_PATTERN =
-  /\b(?:me\s+marie|se\s+marie|mariage|partenariat\s+enregistre)\b/;
+const MARRIAGE_TOPIC_PATTERN =
+  /\b(?:mariage|partenariat\s+enregistre|marie|marier|marions)\b/;
+const PERSONAL_MARRIAGE_PATTERN =
+  /\b(?:je\s+me\s+(?:marie|marierai|marierais)|je\s+vais\s+me\s+marier|je\s+me\s+suis\s+mariee?|nous\s+nous\s+(?:marions|marierons|marierions)|nous\s+nous\s+sommes\s+maries?|mon\s+mariage|notre\s+mariage|mon\s+partenariat\s+enregistre|notre\s+partenariat\s+enregistre|je\s+(?:conclus|enregistre)\s+(?:un|mon)\s+partenariat\s+enregistre)\b/;
 const DEATH_FIRST_DEGREE_KEYWORDS_PATTERN =
   /\b(?:(?<!beau-)(?<!grand-)pere|(?<!belle-)(?<!grand-)mere|conjoint|conjointe|epoux|epouse|(?<!petit-)fils|(?<!petite-)fille|mon\s+enfant)\b/;
 const DEATH_SECOND_DEGREE_KEYWORDS_PATTERN =
   /\b(?:frere|soeur|grand-pere|grand-mere|grands-parents|beau-frere|belle-soeur|beau-pere|belle-mere|petit-fils|petite-fille|petits-enfants)\b/;
 const DEATH_KEYWORDS_PATTERN = /\b(?:deces|decede|decedee|mort|morte)\b/;
-const MOVING_KEYWORDS_PATTERN = /\b(?:demenage|demenagement|demenager)\b/;
+const MOVING_TOPIC_PATTERN =
+  /\b(?:demenage|demenagent|demenagement|demenager|demenagerai|demenagerais|demenagerons|demenagerions|demenageons)\b/;
+const PERSONAL_MOVING_PATTERN =
+  /\b(?:je\s+(?:(?:dois|devrai|souhaite)\s+|(?:vais|prevois)\s+(?:de\s+)?)?demenag(?:e|er|erai|erais)|nous\s+(?:(?:devons|devrons|souhaitons)\s+|(?:allons|prevoyons)\s+(?:de\s+)?)?demenag(?:eons|er|erons|erions)|mon\s+demenagement|notre\s+demenagement)\b/;
 
 export function questionTargetsExceptionalLeave(question: string): boolean {
   const text = normalize(question);
   if (EXCEPTIONAL_LEAVE_TOPIC_PATTERN.test(text)) return true;
-  if (MARRIAGE_KEYWORDS_PATTERN.test(text)) return true;
-  if (MOVING_KEYWORDS_PATTERN.test(text)) return true;
+  if (MARRIAGE_TOPIC_PATTERN.test(text)) return true;
+  if (MOVING_TOPIC_PATTERN.test(text)) return true;
   // Un décès n'appartient à ce gabarit que si un lien de parenté précis est
   // mentionné : "décès de ma mère" doit être reconnu, "décès de mon proche"
   // seul doit rester ambigu et passer par la clarification neutre déjà
@@ -255,7 +260,11 @@ function extractLeaveReason(
 ): ExtractedFact {
   const text = normalize(question);
   const matches: string[] = [];
-  if (MARRIAGE_KEYWORDS_PATTERN.test(text)) matches.push("marriage");
+  // Le droit concerne le mariage ou le partenariat de la personne qui pose
+  // la question. Une simple occurrence de « mariage » ne suffit pas :
+  // « mariage de mon frère » doit conduire à une clarification, jamais à
+  // l'attribution automatique du congé prévu pour son propre mariage.
+  if (PERSONAL_MARRIAGE_PATTERN.test(text)) matches.push("marriage");
   if (
     DEATH_KEYWORDS_PATTERN.test(text) &&
     DEATH_FIRST_DEGREE_KEYWORDS_PATTERN.test(text)
@@ -268,7 +277,10 @@ function extractLeaveReason(
   ) {
     matches.push("death_second_degree");
   }
-  if (MOVING_KEYWORDS_PATTERN.test(text)) matches.push("moving");
+  // Comme pour le mariage, le déménagement doit concerner la personne qui
+  // pose la question. « Mon collègue déménage » cible bien ce gabarit, mais
+  // ne permet pas d'attribuer le jour prévu pour son propre déménagement.
+  if (PERSONAL_MOVING_PATTERN.test(text)) matches.push("moving");
 
   const unique = [...new Set(matches)];
   const knownValues = new Set(fact.categoryValues.map((v) => v.valueKey));

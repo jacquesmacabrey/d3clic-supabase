@@ -16,7 +16,8 @@ import {
 import { addRuleDisplayModel } from "../_shared/rag/rule-admin-presenter.ts";
 import { simulateAdministrativeRuleSet } from "../_shared/rag/rule-admin-simulation.ts";
 
-const FUNCTION_VERSION = "RAG-10.7-ADMIN-RULES-2026-08-03";
+const FUNCTION_VERSION =
+  "RAG-10.7-ADMIN-RULES-EVENT-SUBJECT-FIX-2026-08-04";
 const MAX_JSON_BODY_BYTES = 65_536;
 
 async function readBody(request: Request): Promise<RuleAdminRequest> {
