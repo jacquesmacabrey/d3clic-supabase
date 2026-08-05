@@ -150,6 +150,31 @@ set status = 'needs_review'
 where content_block_id =
   '33333333-3333-4333-8333-333333333333'::uuid;
 
+-- needs_review -> published doit également être refusé.
+do $$
+begin
+  begin
+    update internal.onboarding_content_blocks
+    set status = 'published',
+        validated_by = '11111111-1111-4111-8111-111111111111'::uuid,
+        validated_at = pg_catalog.now(),
+        published_by = '11111111-1111-4111-8111-111111111111'::uuid,
+        published_at = pg_catalog.now()
+    where content_block_id =
+      '33333333-3333-4333-8333-333333333333'::uuid;
+    raise exception
+      'ÉCHEC : transition needs_review -> published acceptée';
+  exception
+    when others then
+      if sqlerrm =
+        'ÉCHEC : transition needs_review -> published acceptée'
+      then
+        raise;
+      end if;
+  end;
+end;
+$$;
+
 update internal.onboarding_content_blocks
 set status = 'validated',
     validated_by = '11111111-1111-4111-8111-111111111111'::uuid,
