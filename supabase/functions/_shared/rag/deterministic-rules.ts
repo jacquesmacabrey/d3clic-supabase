@@ -8,6 +8,7 @@ import {
   extractFacts,
   type PublicDeterministicAnswer,
   questionTargetsAnnualLeave,
+  questionTargetsExceptionalLeave,
   renderResolution,
   requiresDeterministicHandling,
   runtimeRegistryMismatch,
@@ -31,6 +32,7 @@ export {
   detectTemplateIntent,
   parseRuleContext,
   questionTargetsAnnualLeave,
+  questionTargetsExceptionalLeave,
   requiresDeterministicHandling,
   runtimeRegistryMismatch,
 };

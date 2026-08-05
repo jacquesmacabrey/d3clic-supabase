@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>D3clic — Assistant RH</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17324d;
+      --muted: #60758a;
+      --line: #dce5ec;
+      --paper: #ffffff;
+      --canvas: #f3f7fa;
+      --accent: #176b87;
+      --accent-dark: #10536a;
+      --danger: #a63131;
+      --success: #1d6b48;
+      --warning: #8a5a00;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+
+    main {
+      width: min(760px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    h1, h2, p {
+      margin-top: 0;
+    }
+
+    h1 {
+      margin-bottom: 6px;
+      font-size: clamp(1.55rem, 5vw, 2rem);
+      line-height: 1.2;
+    }
+
+    h2 {
+      margin-bottom: 14px;
+      font-size: 1.15rem;
+    }
+
+    .eyebrow {
+      margin-bottom: 6px;
+      color: var(--accent);
+      font-size: .75rem;
+      font-weight: 800;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+
+    .lead {
+      margin-bottom: 22px;
+      color: var(--muted);
+    }
+
+    .card {
+      margin-bottom: 16px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--paper);
+      box-shadow: 0 8px 24px rgba(23, 50, 77, .06);
+    }
+
+    .status {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 16px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #f9fbfc;
+      color: var(--muted);
+    }
+
+    .status::before {
+      content: "";
+      flex: 0 0 10px;
+      width: 10px;
+      height: 10px;
+      margin-top: 6px;
+      border-radius: 50%;
+      background: #8193a3;
+    }
+
+    .status[data-tone="success"] {
+      color: var(--success);
+      border-color: #bcdccf;
+      background: #f3faf7;
+    }
+
+    .status[data-tone="success"]::before {
+      background: var(--success);
+    }
+
+    .status[data-tone="warning"] {
+      color: var(--warning);
+      border-color: #ead6aa;
+      background: #fffaf0;
+    }
+
+    .status[data-tone="warning"]::before {
+      background: #d99000;
+    }
+
+    .status[data-tone="error"] {
+      color: var(--danger);
+      border-color: #ecc5c5;
+      background: #fff6f6;
+    }
+
+    .status[data-tone="error"]::before {
+      background: var(--danger);
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 700;
+    }
+
+    input, textarea, button {
+      width: 100%;
+      border-radius: 10px;
+      font: inherit;
+    }
+
+    input, textarea {
+      margin-bottom: 14px;
+      padding: 11px 12px;
+      border: 1px solid #b9c8d4;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    textarea {
+      min-height: 112px;
+      resize: vertical;
+    }
+
+    input:focus, textarea:focus {
+      outline: 3px solid rgba(23, 107, 135, .15);
+      border-color: var(--accent);
+    }
+
+    button {
+      padding: 11px 15px;
+      border: 0;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    button:hover {
+      background: var(--accent-dark);
+    }
+
+    button:disabled {
+      opacity: .55;
+      cursor: wait;
+    }
+
+    button.secondary {
+      border: 1px solid #b9c8d4;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    button.secondary:hover {
+      background: #f3f7fa;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: .9rem;
+    }
+
+    .pending-request {
+      margin-bottom: 16px;
+      padding: 12px 14px;
+      border: 1px solid #bcdccf;
+      border-radius: 12px;
+      background: #f3faf7;
+    }
+
+    .pending-request-label {
+      margin-bottom: 4px;
+      color: var(--success);
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .pending-request-text {
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    .answer {
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+    }
+
+    .answer-text {
+      white-space: pre-wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      margin-bottom: 10px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: #e9f4f7;
+      color: var(--accent-dark);
+      font-size: .78rem;
+      font-weight: 800;
+    }
+
+    .citation {
+      margin-top: 10px;
+      padding: 12px 14px;
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      background: #f7fafc;
+    }
+
+    .citation-title {
+      margin-bottom: 4px;
+      font-weight: 800;
+    }
+
+    .citation-meta {
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: .86rem;
+    }
+
+    .citation-excerpt {
+      margin: 0;
+      font-size: .92rem;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    @media (max-width: 560px) {
+      main {
+        width: min(100% - 20px, 760px);
+        padding-top: 18px;
+      }
+
+      .card {
+        padding: 16px;
+      }
+
+      .actions {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+        <script src="/assets/js/GBJSTK.js?v=1784541663"></script>
+<script type="text/javascript">
+        (function(){
+            var gbAngularMode = true;
+            window.addEventListener("click", function(evt) {
+                const target = evt.target.closest("a, area");
+                if (target) {
+                    const href = target.getAttribute("href") || "";
+                    const isAnchor = href.startsWith("#");
+                    const isJS = target.protocol.startsWith("javascript");
+        
+                    const forwardClick = (evt) => {
+                        evt.preventDefault();
+                        parent.postMessage(href, "*");
+                        parent.postMessage({url: href}, "*");
+                        return false;
+                    }
+        
+                    if (!isAnchor && !isJS) {
+                        forwardClick(evt);
+                        target.onclick = forwardClick;
+                    }
+                }
+            });
+        })(); 
+        </script>
+        </head>
+<body>
+  <main>
+    <h1>Assistant RH</h1>
+    <p class="lead">Pose toutes tes questions en lien avec ton travail.</p>
+
+    <section class="card" aria-labelledby="access-title">
+      <h2 id="access-title">Accès collaborateur</h2>
+      <div id="access-status" class="status" role="status" aria-live="polite">
+        Initialisation de la session…
+      </div>
+
+      <form id="activation-form" hidden>
+        <p class="hint">Une activation unique est nécessaire sur cet appareil.</p>
+
+        <label for="display-name">Nom affiché</label>
+        <input id="display-name" name="display_name" type="text" minlength="2" maxlength="100" autocomplete="name" required>
+
+        <label for="email">Adresse e-mail</label>
+        <input id="email" name="email" type="email" maxlength="254" autocomplete="email" required>
+
+        <button id="activation-button" type="submit">Demander l’activation</button>
+      </form>
+
+      <div id="pending-actions" class="actions" hidden>
+        <button id="refresh-button" type="button">Vérifier l’activation</button>
+        <button id="new-session-button" class="secondary" type="button">Recréer la session</button>
+      </div>
+    </section>
+
+    <section id="question-card" class="card" aria-labelledby="question-title" hidden>
+      <h2 id="question-title">Poser une question</h2>
+      <div id="pending-request" class="pending-request" hidden>
+        <div class="pending-request-label">Demande en cours</div>
+        <p id="pending-request-text" class="pending-request-text"></p>
+        <button id="new-request-button" class="secondary" type="button">Nouvelle demande</button>
+      </div>
+      <form id="question-form">
+        <label id="question-label" for="question">Question</label>
+        <textarea id="question" name="question" minlength="3" maxlength="1000" placeholder="Pose ta question…" required></textarea>
+        <button id="question-button" type="submit">Chercher dans les documents</button>
+      </form>
+      <p class="hint">La première réponse peut prendre jusqu’à environ deux minutes.</p>
+
+      <div id="answer" class="answer" hidden aria-live="polite">
+        <div id="answer-badge" class="badge"></div>
+        <p id="answer-text" class="answer-text"></p>
+        <div id="citations"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.6/dist/umd/supabase.min.js"></script>
+  <script>
+    (function () {
+      "use strict";
+
+      var SUPABASE_URL = "https://ittlvqwgdsgzbgnjyexj.supabase.co";
+var SUPABASE_PUBLISHABLE_KEY = "sb_publishable__2IdCmghHo4Mc9p76URZPQ_rXYPtDS3";
+var STORAGE_KEY = "d3clic-rag-production-test-auth";
+var PENDING_REQUEST_KEY = "d3clic-rag-production-pending-request";
+
+      var accessStatus = document.getElementById("access-status");
+      var activationForm = document.getElementById("activation-form");
+      var activationButton = document.getElementById("activation-button");
+      var pendingActions = document.getElementById("pending-actions");
+      var refreshButton = document.getElementById("refresh-button");
+      var newSessionButton = document.getElementById("new-session-button");
+      var questionCard = document.getElementById("question-card");
+      var questionForm = document.getElementById("question-form");
+      var questionButton = document.getElementById("question-button");
+      var questionInput = document.getElementById("question");
+      var questionLabel = document.getElementById("question-label");
+      var pendingRequestPanel = document.getElementById("pending-request");
+      var pendingRequestText = document.getElementById("pending-request-text");
+      var newRequestButton = document.getElementById("new-request-button");
+      var answerPanel = document.getElementById("answer");
+      var answerBadge = document.getElementById("answer-badge");
+      var answerText = document.getElementById("answer-text");
+      var citations = document.getElementById("citations");
+
+      var client = null;
+      var pendingQuestion = null;
+      var pendingDisplayQuestion = null;
+
+      function persistPendingQuestion() {
+        try {
+          if (pendingQuestion === null) {
+            window.sessionStorage.removeItem(PENDING_REQUEST_KEY);
+            return;
+          }
+          window.sessionStorage.setItem(
+            PENDING_REQUEST_KEY,
+            JSON.stringify({
+              context: pendingQuestion,
+              display: pendingDisplayQuestion
+            })
+          );
+        } catch (_) {
+          // La continuité reste disponible en mémoire jusqu'au rechargement.
+        }
+      }
+
+      function renderPendingQuestion() {
+        var active = typeof pendingQuestion === "string" && pendingQuestion.length >= 3;
+        pendingRequestPanel.hidden = !active;
+        pendingRequestText.textContent = active ? pendingDisplayQuestion : "";
+        questionLabel.textContent = active ? "Complément" : "Question";
+        questionInput.placeholder = active
+          ? "Indique les informations demandées…"
+          : "Pose ta question…";
+        questionButton.textContent = active
+          ? "Envoyer le complément"
+          : "Chercher dans les documents";
+      }
+
+      function setPendingQuestion(context, display) {
+        pendingQuestion = context;
+        pendingDisplayQuestion = display;
+        persistPendingQuestion();
+        renderPendingQuestion();
+      }
+
+      function clearPendingQuestion(clearInput, clearAnswer) {
+        pendingQuestion = null;
+        pendingDisplayQuestion = null;
+        persistPendingQuestion();
+        renderPendingQuestion();
+        if (clearInput) questionInput.value = "";
+        if (clearAnswer) {
+          answerPanel.hidden = true;
+          citations.replaceChildren();
+        }
+      }
+
+      function restorePendingQuestion() {
+        try {
+          var raw = window.sessionStorage.getItem(PENDING_REQUEST_KEY);
+          if (!raw) {
+            renderPendingQuestion();
+            return;
+          }
+          var stored = JSON.parse(raw);
+          if (
+            !stored ||
+            typeof stored.context !== "string" ||
+            stored.context.length < 3 ||
+            stored.context.length > 4000 ||
+            typeof stored.display !== "string" ||
+            stored.display.length < 3 ||
+            stored.display.length > 1000
+          ) {
+            clearPendingQuestion(false, false);
+            return;
+          }
+          pendingQuestion = stored.context;
+          pendingDisplayQuestion = stored.display;
+          questionInput.value = "";
+          renderPendingQuestion();
+        } catch (_) {
+          clearPendingQuestion(false, false);
+        }
+      }
+
+      function setStatus(message, tone) {
+        accessStatus.textContent = message;
+        accessStatus.dataset.tone = tone || "";
+      }
+
+      function setAccessView(options) {
+        activationForm.hidden = !options.activation;
+        pendingActions.hidden = !options.pending;
+        questionCard.hidden = !options.active;
+      }
+
+      function friendlyError(error) {
+        if (!error) return "Une erreur inconnue est survenue.";
+        if (typeof error === "string") return error;
+        return error.message || "Une erreur inconnue est survenue.";
+      }
+
+      async function invoke(functionName, options) {
+        var result = await client.functions.invoke(functionName, options || {});
+        if (!result.error) return result.data;
+
+        var payload = null;
+        try {
+          if (result.error.context && typeof result.error.context.clone === "function") {
+            payload = await result.error.context.clone().json();
+          } else if (result.error.context && typeof result.error.context.json === "function") {
+            payload = await result.error.context.json();
+          }
+        } catch (_) {
+          payload = null;
+        }
+
+        var message = payload && payload.message
+          ? payload.message
+          : result.error.message;
+        var error = new Error(message || "L’appel a échoué.");
+        error.code = payload && payload.code ? payload.code : null;
+        throw error;
+      }
+
+      async function ensureSession() {
+        var current = await client.auth.getSession();
+        if (current.error) throw current.error;
+        if (current.data && current.data.session && current.data.session.user) {
+          return current.data.session;
+        }
+
+        var created = await client.auth.signInAnonymously();
+        if (created.error) throw created.error;
+        if (!created.data || !created.data.session) {
+          throw new Error("La session anonyme n’a pas pu être créée.");
+        }
+        return created.data.session;
+      }
+
+      async function refreshContext() {
+        setStatus("Vérification de l’activation…");
+        setAccessView({ activation: false, pending: false, active: false });
+
+        var result = await client.rpc("get_chat_context");
+        if (result.error) throw result.error;
+        var context = result.data || {};
+        var status = context.status_code || "unknown";
+
+        if (context.success === true && status === "active") {
+          setStatus(
+            "Appareil activé" + (context.display_name ? " pour " + context.display_name : "") + ".",
+            "success"
+          );
+          setAccessView({ activation: false, pending: false, active: true });
+          return;
+        }
+
+        if (status === "activation_required") {
+          setStatus("Cet appareil doit être activé une seule fois.", "warning");
+          setAccessView({ activation: true, pending: false, active: false });
+          return;
+        }
+
+        if (status === "pending_activation") {
+          setStatus("Demande envoyée. Valide-la dans le back-office, puis vérifie à nouveau.", "warning");
+          setAccessView({ activation: false, pending: true, active: false });
+          return;
+        }
+
+        if (status === "device_revoked") {
+          setStatus("Cette session a été révoquée. Recrée une session pour recommencer.", "error");
+          setAccessView({ activation: false, pending: true, active: false });
+          return;
+        }
+
+        if (status === "user_inactive") {
+          setStatus("Le compte collaborateur associé est désactivé.", "error");
+          setAccessView({ activation: false, pending: false, active: false });
+          return;
+        }
+
+        setStatus("Statut d’accès non reconnu : " + status + ".", "error");
+        setAccessView({ activation: false, pending: true, active: false });
+      }
+
+      async function requestActivation(event) {
+        event.preventDefault();
+        activationButton.disabled = true;
+        activationButton.textContent = "Envoi…";
+
+        try {
+          var displayName = document.getElementById("display-name").value.trim();
+          var email = document.getElementById("email").value.trim();
+          var response = await invoke("request-device-activation", {
+            body: {
+              display_name: displayName,
+              email: email,
+              goodbarber_user_id: null,
+              suggested_groups: []
+            }
+          });
+
+          if (!response || response.ok !== true) {
+            throw new Error(
+              response && response.error
+                ? response.error
+                : "La demande d’activation n’a pas été enregistrée."
+            );
+          }
+          await refreshContext();
+        } catch (error) {
+          setStatus(friendlyError(error), "error");
+          setAccessView({ activation: true, pending: false, active: false });
+        } finally {
+          activationButton.disabled = false;
+          activationButton.textContent = "Demander l’activation";
+        }
+      }
+
+      async function recreateSession() {
+        newSessionButton.disabled = true;
+        try {
+          clearPendingQuestion(true, true);
+          await client.auth.signOut({ scope: "local" });
+          await ensureSession();
+          await refreshContext();
+        } catch (error) {
+          setStatus(friendlyError(error), "error");
+        } finally {
+          newSessionButton.disabled = false;
+        }
+      }
+
+      function resultLabel(result) {
+        if (result === "supported") return "Réponse documentée";
+        if (result === "conflicting_sources") return "Sources contradictoires";
+        return "Information insuffisante";
+      }
+
+      function citationMeta(citation) {
+        var parts = [];
+        if (citation.version_label) parts.push("Version " + citation.version_label);
+        if (citation.effective_date) parts.push("Effet : " + citation.effective_date);
+        if (citation.page_start !== null && citation.page_start !== undefined) {
+          var pages = String(citation.page_start);
+          if (
+            citation.page_end !== null &&
+            citation.page_end !== undefined &&
+            citation.page_end !== citation.page_start
+          ) {
+            pages += "–" + citation.page_end;
+          }
+          parts.push("Page" + (pages.indexOf("–") >= 0 ? "s " : " ") + pages);
+        }
+        if (citation.section_title) parts.push(citation.section_title);
+        if (citation.article_reference) parts.push(citation.article_reference);
+        return parts.join(" · ");
+      }
+
+      function renderAnswer(data) {
+        answerPanel.hidden = false;
+        answerBadge.textContent = resultLabel(data.result);
+        answerText.textContent = data.answer || "";
+        citations.replaceChildren();
+
+        (Array.isArray(data.citations) ? data.citations : []).forEach(function (citation) {
+          var block = document.createElement("article");
+          block.className = "citation";
+
+          var title = document.createElement("div");
+          title.className = "citation-title";
+          title.textContent = citation.title || "Document";
+          block.appendChild(title);
+
+          var metaText = citationMeta(citation);
+          if (metaText) {
+            var meta = document.createElement("div");
+            meta.className = "citation-meta";
+            meta.textContent = metaText;
+            block.appendChild(meta);
+          }
+
+          if (citation.excerpt) {
+            var excerpt = document.createElement("p");
+            excerpt.className = "citation-excerpt";
+            excerpt.textContent = citation.excerpt;
+            block.appendChild(excerpt);
+          }
+
+          citations.appendChild(block);
+        });
+      }
+
+      async function askQuestion(event) {
+        event.preventDefault();
+        var question = questionInput.value
+          .replace(/\s+/g, " ")
+          .trim();
+        var requestBody = { question: question };
+        if (pendingQuestion !== null) {
+          requestBody.pending_question = pendingQuestion;
+        }
+
+        questionButton.disabled = true;
+        questionButton.textContent = "Recherche en cours…";
+        answerPanel.hidden = true;
+
+        try {
+          var data = await invoke("rag-answer-question", {
+            body: requestBody,
+            headers: { "X-Request-Id": crypto.randomUUID() }
+          });
+
+          if (!data || data.success !== true) {
+            throw new Error(
+              data && data.message ? data.message : "Réponse invalide du service."
+            );
+          }
+          renderAnswer(data);
+          if (data.result === "needs_clarification") {
+            var continuation = typeof data.continuation_question === "string"
+              ? data.continuation_question
+              : (pendingQuestion || question);
+            setPendingQuestion(
+              continuation,
+              pendingDisplayQuestion || question
+            );
+            questionInput.value = "";
+            questionInput.focus();
+          } else {
+            clearPendingQuestion(true, false);
+          }
+        } catch (error) {
+          answerPanel.hidden = false;
+          answerBadge.textContent = "Erreur";
+          answerText.textContent = friendlyError(error);
+          citations.replaceChildren();
+        } finally {
+          questionButton.disabled = false;
+          renderPendingQuestion();
+        }
+      }
+
+      function startNewRequest() {
+        clearPendingQuestion(true, true);
+        questionInput.focus();
+      }
+
+      async function initialize() {
+        if (!window.supabase || typeof window.supabase.createClient !== "function") {
+          setStatus("La bibliothèque Supabase n’a pas pu être chargée.", "error");
+          return;
+        }
+
+        client = window.supabase.createClient(
+          SUPABASE_URL,
+          SUPABASE_PUBLISHABLE_KEY,
+          {
+            auth: {
+              persistSession: true,
+              autoRefreshToken: true,
+              detectSessionInUrl: false,
+              storageKey: STORAGE_KEY
+            }
+          }
+        );
+
+        restorePendingQuestion();
+
+        try {
+          await ensureSession();
+          await refreshContext();
+        } catch (error) {
+          setStatus(friendlyError(error), "error");
+          setAccessView({ activation: false, pending: false, active: false });
+        }
+      }
+
+      activationForm.addEventListener("submit", requestActivation);
+      refreshButton.addEventListener("click", function () {
+        refreshContext().catch(function (error) {
+          setStatus(friendlyError(error), "error");
+        });
+      });
+      newSessionButton.addEventListener("click", recreateSession);
+      newRequestButton.addEventListener("click", startNewRequest);
+      questionForm.addEventListener("submit", askQuestion);
+
+      initialize();
+    })();
+  </script>
+</body>
+</html>

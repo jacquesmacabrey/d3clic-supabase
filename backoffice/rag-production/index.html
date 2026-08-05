@@ -1,0 +1,2132 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Back-office D3clic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --teal: #005A78;
+  --teal-dark: #033f54;
+  --amber: #C88831;
+  --bg: #F6F7F5;
+  --card: #ffffff;
+  --border: rgba(0,90,120,.14);
+  --text: #1C2B33;
+  --muted: #5b6b73;
+  --success: #1E7A46;
+  --success-bg: #eaf5ee;
+  --danger: #B23A34;
+  --danger-bg: #fbeceb;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+}
+.mono { font-family: 'IBM Plex Mono', monospace; }
+.wrap { max-width: 720px; margin: 0 auto; padding: 24px 16px 60px; }
+
+#view-login .card { max-width: 380px; margin: 80px auto 0; }
+.brand {
+  color: var(--teal);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0,40,60,.05);
+}
+h1 { font-size: 22px; margin: 0 0 4px; color: var(--teal-dark); }
+h2 { font-size: 18px; margin: 0 0 4px; color: var(--teal-dark); }
+.hint { color: var(--muted); font-size: 14px; margin: 0 0 18px; }
+input[type=text], input[type=email], input[type=date], input[type=file], input[type=number], select, textarea {
+  width: 100%;
+  padding: 12px 13px;
+  border: 1px solid #c7d0d5;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 15px;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+}
+textarea { min-height: 92px; resize: vertical; }
+button { font: inherit; cursor: pointer; border: 0; border-radius: 10px; }
+.btn-primary {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--teal);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+}
+.btn-primary:hover { background: var(--teal-dark); }
+.btn-primary:disabled { opacity: .55; cursor: default; }
+.msg { margin-top: 12px; font-size: 14px; }
+.msg.ok { color: var(--success); }
+.msg.err { color: var(--danger); }
+
+#view-app { display: none; }
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 4px 0 20px; }
+.who { display: flex; flex-direction: column; gap: 2px; font-size: 14px; color: var(--muted); }
+.who strong { color: var(--text); }
+.btn-ghost { background: transparent; color: var(--teal); font-weight: 600; font-size: 13px; padding: 8px 10px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; border-bottom: 1px solid var(--border); }
+.tab {
+  background: transparent;
+  padding: 10px 4px;
+  margin-right: 18px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+}
+.tab.active { color: var(--teal-dark); border-bottom-color: var(--teal); }
+.tab .count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: 6px;
+  border-radius: 999px;
+  background: var(--amber);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.list { display: flex; flex-direction: column; gap: 10px; }
+.row-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--teal);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.row-card.pending { border-left-color: var(--amber); }
+.row-card.inactive { border-left-color: #b8c1c6; opacity: .7; }
+.avatar {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+}
+.row-main { flex: 1; min-width: 0; }
+.row-name { font-weight: 700; font-size: 15px; }
+.row-sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.chip {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(0,90,120,.08);
+  color: var(--teal-dark);
+}
+.chip.suggested { background: rgba(200,136,49,.14); color: #8a5f20; }
+.chip.disabled-chip { background: rgba(184,193,198,.35); color: var(--muted); }
+.empty { text-align: center; color: var(--muted); padding: 40px 16px; font-size: 14px; }
+.btn-small {
+  padding: 8px 14px;
+  background: var(--teal);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.btn-small.secondary { background: #eef1f2; color: var(--text); }
+.btn-small.danger { background: var(--danger-bg); color: var(--danger); }
+.row-actions { display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; }
+
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(10,30,40,.45);
+  align-items: flex-start;
+  justify-content: center;
+  padding: 30px 14px;
+  overflow-y: auto;
+  z-index: 100;
+}
+.overlay.open { display: flex; }
+.modal { background: #fff; border-radius: 16px; max-width: 440px; width: 100%; padding: 22px; }
+.field-label { font-weight: 700; font-size: 13px; margin: 14px 0 6px; display: block; }
+.check-list { display: flex; flex-direction: column; gap: 2px; }
+.check-row { display: flex; align-items: center; gap: 9px; padding: 7px 0; font-size: 14px; }
+.modal-actions { display: flex; gap: 8px; margin-top: 20px; }
+.btn-cancel { flex: 0 0 auto; padding: 11px 16px; background: #eef1f2; color: var(--text); font-weight: 600; font-size: 14px; }
+.btn-confirm { flex: 1; padding: 11px 16px; background: var(--teal); color: #fff; font-weight: 700; font-size: 14px; }
+.btn-confirm.danger { background: var(--danger); }
+.error-box {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--danger-bg);
+  color: var(--danger);
+  border-radius: 9px;
+  font-size: 13px;
+  display: none;
+}
+
+.channel-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.channel-row.channel-disabled { opacity: .6; }
+.channel-info { flex: 1; min-width: 0; }
+.channel-label { font-weight: 700; font-size: 15px; }
+.channel-id { color: var(--muted); font-size: 12px; margin-top: 1px; }
+.channel-protected { font-size: 11px; color: var(--amber); font-weight: 700; margin-top: 2px; }
+.channel-actions { display: flex; gap: 6px; flex: 0 0 auto; }
+.new-channel-card { margin-top: 16px; }
+.rag-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 12px;
+}
+.rag-form-grid .full { grid-column: 1 / -1; }
+.rag-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 20px 0 10px;
+}
+.rag-toolbar h2 { margin: 0; }
+.rag-toolbar .btn-small { flex: 0 0 auto; }
+.rag-card { border-left-color: #b8c1c6; }
+.rag-card.status-active { border-left-color: var(--success); }
+.rag-card.status-ready { border-left-color: var(--amber); }
+.rag-card.status-processing, .rag-card.status-draft { border-left-color: var(--teal); }
+.rag-card.status-error { border-left-color: var(--danger); }
+.rag-status {
+  display: inline-flex;
+  margin-top: 7px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #eef1f2;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.rag-status.active { background: var(--success-bg); color: var(--success); }
+.rag-status.ready { background: rgba(200,136,49,.14); color: #8a5f20; }
+.rag-status.error { background: var(--danger-bg); color: var(--danger); }
+.rag-error-detail { color: var(--danger); font-size: 12px; margin-top: 6px; }
+.rag-meta { color: var(--muted); font-size: 12px; margin-top: 5px; }
+.rag-progress {
+  width: 100%;
+  height: 6px;
+  margin-top: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e9edef;
+}
+.rag-progress span { display: block; height: 100%; background: var(--teal); }
+.rule-toolbar-actions { display: flex; gap: 8px; align-items: center; }
+.rule-toolbar-actions select { width: auto; min-width: 170px; margin: 0; padding: 8px 10px; font-size: 13px; }
+.rule-card { border-left-color: #b8c1c6; }
+.rule-card.status-proposed, .rule-card.status-needs_attention { border-left-color: var(--amber); }
+.rule-card.status-approved { border-left-color: var(--teal); }
+.rule-card.status-validated { border-left-color: var(--success); }
+.rule-card.status-rejected, .rule-card.status-invalidated { border-left-color: #b8c1c6; }
+.rule-summary { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px; }
+.rule-modal { max-width: 700px; }
+.rule-detail-header { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; }
+.rule-detail-section { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+.rule-detail-section h3 { margin: 0 0 10px; color: var(--teal-dark); font-size: 16px; }
+.rule-integrity { padding: 10px 12px; border-radius: 10px; background: var(--success-bg); color: var(--success); font-size: 13px; font-weight: 600; }
+.rule-integrity.invalid { background: var(--danger-bg); color: var(--danger); }
+.rule-display-card, .rule-edit-card, .rule-history-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 9px;
+  background: #fff;
+}
+.rule-display-card strong { color: var(--teal-dark); }
+.rule-condition { margin-top: 6px; font-size: 13px; color: var(--muted); }
+.rule-source { margin-top: 8px; padding: 9px 10px; border-radius: 8px; background: #f4f6f6; font-size: 12px; color: var(--muted); white-space: pre-wrap; }
+.rule-edit-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 0 10px; }
+.rule-edit-grid input { margin-bottom: 8px; }
+.rule-edit-condition { display: grid; grid-template-columns: 1.2fr .8fr; gap: 8px; align-items: end; margin-top: 8px; }
+.rule-edit-condition input, .rule-edit-condition select { margin: 0; }
+.rule-action-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.rule-action-bar .btn-small { flex: 0 0 auto; }
+.rule-simulation-result { margin-top: 10px; padding: 11px 12px; border-radius: 9px; background: #eef5f7; font-size: 14px; }
+.rule-simulation-result.err { background: var(--danger-bg); color: var(--danger); }
+.rule-history-item { font-size: 13px; }
+.rule-history-meta { color: var(--muted); margin-top: 3px; }
+.rule-reject-box { margin-top: 10px; padding: 12px; border-radius: 10px; background: #f7f8f8; }
+.rule-reject-box select, .rule-reject-box textarea { margin-bottom: 8px; }
+@media (max-width: 620px) {
+  .rag-form-grid { grid-template-columns: 1fr; }
+  .rag-form-grid .full { grid-column: auto; }
+  .row-card { flex-wrap: wrap; }
+  .row-actions { width: 100%; flex-direction: row; }
+  .rule-toolbar-actions { width: 100%; align-items: stretch; flex-direction: column; }
+  .rule-toolbar-actions select { width: 100%; }
+  .rule-detail-header { flex-direction: column; }
+  .rule-edit-grid, .rule-edit-condition { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div id="view-login">
+  <div class="wrap">
+    <div class="card">
+      <div class="brand">D3CLIC</div>
+      <h1>Back-office</h1>
+      <p class="hint">Connexion réservée aux administrateurs D3clic.</p>
+      <input type="email" id="loginEmail" placeholder="Votre adresse e-mail">
+      <button class="btn-primary" id="loginBtn">Recevoir un lien de connexion</button>
+      <div class="msg" id="loginMsg"></div>
+    </div>
+  </div>
+</div>
+
+<div id="view-app">
+  <div class="wrap">
+    <div class="topbar">
+      <div class="who">
+        <div>Connecté : <strong id="connectedUserLabel">-</strong></div>
+        <div>Institution : <strong id="institutionLabel">-</strong></div>
+      </div>
+      <button class="btn-ghost" id="signOutBtn">Se deconnecter</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" id="tabDashboard">Collaborateurs</button>
+      <button class="tab" id="tabPending">Demandes en attente<span class="count" id="pendingCount" style="display:none;">0</span></button>
+      <button class="tab" id="tabChannels">Canaux</button>
+      <button class="tab" id="tabRag">Documentation IA</button>
+      <button class="tab" id="tabRules">Règles IA<span class="count" id="rulesCount" style="display:none;">0</span></button>
+    </div>
+
+    <div id="viewDashboard">
+      <div class="list" id="collaboratorsList"></div>
+    </div>
+
+    <div id="viewPending" style="display:none;">
+      <div class="list" id="pendingList"></div>
+    </div>
+
+    <div id="viewChannels" style="display:none;">
+      <div class="list" id="channelsList"></div>
+
+      <div class="card new-channel-card">
+        <h2>Nouveau canal</h2>
+        <p class="hint">L'identifiant utilisera uniquement des minuscules, chiffres et underscores.</p>
+        <label class="field-label" for="newChannelLabel">Nom affiche</label>
+        <input type="text" id="newChannelLabel" placeholder="Ex. Veilleurs de nuit">
+        <label class="field-label" for="newChannelId">Identifiant technique</label>
+        <input type="text" id="newChannelId" placeholder="Ex. veilleurs_nuit">
+        <div class="error-box" id="newChannelError"></div>
+        <button class="btn-primary" id="newChannelBtn" style="margin-top:10px;">Créer le canal</button>
+      </div>
+    </div>
+
+    <div id="viewRag" style="display:none;">
+      <div class="card">
+        <h2>Ajouter un document</h2>
+        <p class="hint">PDF avec texte sélectionnable ou Word .docx, 20 Mo maximum. L'activation reste manuelle après traitement.</p>
+        <div class="rag-form-grid">
+          <div class="full">
+            <label class="field-label" for="ragTitle">Titre</label>
+            <input type="text" id="ragTitle" placeholder="Ex. Charte de sécurité">
+          </div>
+          <div>
+            <label class="field-label" for="ragDocumentKey">Clé documentaire</label>
+            <input type="text" id="ragDocumentKey" placeholder="Ex. charte_securite">
+          </div>
+          <div>
+            <label class="field-label" for="ragCategory">Catégorie</label>
+            <input type="text" id="ragCategory" placeholder="Ex. Sécurité">
+          </div>
+          <div>
+            <label class="field-label" for="ragVersion">Version</label>
+            <input type="text" id="ragVersion" placeholder="Ex. 2026">
+          </div>
+          <div>
+            <label class="field-label" for="ragEffectiveDate">Entrée en vigueur (facultatif)</label>
+            <input type="date" id="ragEffectiveDate">
+          </div>
+          <div class="full">
+            <label class="field-label" for="ragFile">Fichier</label>
+            <input type="file" id="ragFile" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+          </div>
+        </div>
+        <div class="error-box" id="ragUploadError"></div>
+        <div class="msg" id="ragUploadMsg"></div>
+        <button class="btn-primary" id="ragUploadBtn" style="margin-top:12px;">Déposer et lancer le traitement</button>
+      </div>
+
+      <div class="rag-toolbar">
+        <h2>Documents</h2>
+        <button class="btn-small secondary" id="ragRefreshBtn">Actualiser</button>
+      </div>
+      <div class="list" id="ragDocumentsList">
+        <div class="empty">Ouvre cet onglet pour charger les documents.</div>
+      </div>
+    </div>
+
+    <div id="viewRules" style="display:none;">
+      <div class="rag-toolbar">
+        <div>
+          <h2>Règles déterministes</h2>
+          <p class="hint" style="margin:4px 0 0;">Vérifie les valeurs et leurs sources avant approbation.</p>
+        </div>
+        <div class="rule-toolbar-actions">
+          <select id="ruleStatusFilter" aria-label="Filtrer les règles">
+            <option value="action">Action requise</option>
+            <option value="all">Toutes les règles</option>
+            <option value="proposed">À vérifier</option>
+            <option value="needs_attention">Correction nécessaire</option>
+            <option value="approved">Approuvées</option>
+            <option value="validated">Actives</option>
+            <option value="closed">Rejetées ou remplacées</option>
+          </select>
+          <button class="btn-small secondary" id="rulesRefreshBtn">Actualiser</button>
+        </div>
+      </div>
+      <div class="list" id="rulesList">
+        <div class="empty">Ouvre cet onglet pour charger les règles.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="approveOverlay">
+  <div class="modal">
+    <h2>Examiner la demande</h2>
+    <div id="approveContent"></div>
+    <div class="error-box" id="approveError"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="approveCancel">Annuler</button>
+      <button class="btn-confirm" id="approveConfirm">Confirmer et activer</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="editOverlay">
+  <div class="modal">
+    <h2 id="editTitle">Modifier le collaborateur</h2>
+    <div id="editContent"></div>
+    <div class="error-box" id="editError"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="editCancel">Annuler</button>
+      <button class="btn-confirm" id="editConfirm">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="renameOverlay">
+  <div class="modal">
+    <h2>Renommer le canal</h2>
+    <label class="field-label" for="renameChannelLabel">Nouveau nom affiché</label>
+    <input type="text" id="renameChannelLabel">
+    <div class="error-box" id="renameError"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="renameCancel">Annuler</button>
+      <button class="btn-confirm" id="renameConfirm">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ruleOverlay">
+  <div class="modal rule-modal">
+    <div id="ruleDetailContent"><div class="empty">Chargement...</div></div>
+    <div class="error-box" id="ruleDetailError"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="ruleDetailClose">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0/dist/umd/supabase.js"></script>
+<script>
+var SUPABASE_URL = "https://ittlvqwgdsgzbgnjyexj.supabase.co";
+var SUPABASE_ANON_KEY = "sb_publishable__2IdCmghHo4Mc9p76URZPQ_rXYPtDS3";
+var BUILD_ID = "rag-production-rag-10-7-rules-ui-2026-08-04";
+
+var client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, storageKey: "d3clic-backoffice-rag-production-auth" }
+});
+
+var currentSession = null;
+var currentInstitutionId = null;
+var currentActorAdminUuid = null;
+var dashboardData = { collaborators: [], pending_requests: [], channels: [] };
+var currentDetail = null;
+var currentEditingUser = null;
+var currentRenamingChannelId = null;
+var ragDocuments = [];
+var ragPollTimer = null;
+var ragRuleSets = [];
+var currentRuleDetail = null;
+var activeTab = "dashboard";
+
+var AVATAR_COLORS = ["#005A78", "#C88831", "#1E7A46", "#7C4DBE", "#B23A34", "#0E7C86"];
+var PROTECTED_CHANNEL_IDS = ["all", "cadres"];
+
+function escapeHtml(value) {
+  return String(value == null ? "" : value).replace(/[&<>"]/g, function (c) {
+    if (c === "&") return "&amp;";
+    if (c === "<") return "&lt;";
+    if (c === ">") return "&gt;";
+    return "&quot;";
+  });
+}
+
+function initials(name) {
+  var parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function colorFor(uuid) {
+  var str = String(uuid || "");
+  var sum = 0;
+  for (var i = 0; i < str.length; i++) sum += str.charCodeAt(i);
+  return AVATAR_COLORS[sum % AVATAR_COLORS.length];
+}
+
+function relativeTime(value) {
+  if (!value) return "Jamais vu";
+  var date = new Date(value);
+  var diffMs = Date.now() - date.getTime();
+  var mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "A l'instant";
+  if (mins < 60) return "Il y a " + mins + " min";
+  var hours = Math.floor(mins / 60);
+  if (hours < 24) return "Il y a " + hours + " h";
+  var days = Math.floor(hours / 24);
+  if (days < 30) return "Il y a " + days + " j";
+  return date.toLocaleDateString("fr-CH");
+}
+
+function formatExpiry(value) {
+  if (!value) return "";
+  var date = new Date(value);
+  return date.toLocaleDateString("fr-CH", { day: "numeric", month: "long" }) +
+    " a " + date.toLocaleTimeString("fr-CH", { hour: "2-digit", minute: "2-digit" });
+}
+
+function slugify(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+/* --- Login --- */
+document.getElementById("loginBtn").addEventListener("click", function () {
+  var email = document.getElementById("loginEmail").value.trim();
+  var msg = document.getElementById("loginMsg");
+
+  if (!email) {
+    msg.textContent = "Merci de saisir une adresse e-mail.";
+    msg.className = "msg err";
+    return;
+  }
+
+  msg.textContent = "Envoi en cours...";
+  msg.className = "msg";
+
+  client.auth.signInWithOtp({
+    email: email,
+    options: { emailRedirectTo: "https://d3clic-suite.ch/rag-production/index.html" }
+  }).then(function (result) {
+    if (result.error) {
+      msg.textContent = "Erreur : " + result.error.message;
+      msg.className = "msg err";
+      return;
+    }
+    msg.textContent = "Lien envoyé. Vérifiez votre boîte mail.";
+    msg.className = "msg ok";
+  });
+});
+
+document.getElementById("signOutBtn").addEventListener("click", function () {
+  client.auth.signOut().then(function () {
+    window.location.reload();
+  });
+});
+
+function showLoginAfterSessionEnd(message) {
+  currentSession = null;
+  stopRagPolling();
+  document.getElementById("view-app").style.display = "none";
+  document.getElementById("view-login").style.display = "block";
+  var msg = document.getElementById("loginMsg");
+  msg.textContent = message || "Votre session a expiré. Reconnectez-vous pour continuer.";
+  msg.className = "msg err";
+}
+
+client.auth.onAuthStateChange(function (event, session) {
+  if (session) {
+    currentSession = session;
+    history.replaceState(null, "", window.location.pathname);
+    document.getElementById("view-login").style.display = "none";
+    document.getElementById("view-app").style.display = "block";
+    loadDashboard();
+  } else if (event === "SIGNED_OUT" || event === "USER_DELETED") {
+    showLoginAfterSessionEnd();
+  }
+});
+
+/* --- Tabs --- */
+document.getElementById("tabDashboard").addEventListener("click", function () { setTab("dashboard"); });
+document.getElementById("tabPending").addEventListener("click", function () { setTab("pending"); });
+document.getElementById("tabChannels").addEventListener("click", function () { setTab("channels"); });
+document.getElementById("tabRag").addEventListener("click", function () { setTab("rag"); });
+document.getElementById("tabRules").addEventListener("click", function () { setTab("rules"); });
+
+function setTab(name) {
+  activeTab = name;
+  document.getElementById("tabDashboard").classList.toggle("active", name === "dashboard");
+  document.getElementById("tabPending").classList.toggle("active", name === "pending");
+  document.getElementById("tabChannels").classList.toggle("active", name === "channels");
+  document.getElementById("tabRag").classList.toggle("active", name === "rag");
+  document.getElementById("tabRules").classList.toggle("active", name === "rules");
+  document.getElementById("viewDashboard").style.display = name === "dashboard" ? "block" : "none";
+  document.getElementById("viewPending").style.display = name === "pending" ? "block" : "none";
+  document.getElementById("viewChannels").style.display = name === "channels" ? "block" : "none";
+  document.getElementById("viewRag").style.display = name === "rag" ? "block" : "none";
+  document.getElementById("viewRules").style.display = name === "rules" ? "block" : "none";
+  if (name === "rag") loadRagDocuments();
+  else if (name === "rules") {
+    stopRagPolling();
+    loadRagRuleSets();
+  }
+  else stopRagPolling();
+}
+
+/* --- Data loading --- */
+function authHeaders() {
+  return { Authorization: "Bearer " + currentSession.access_token };
+}
+
+function loadDashboard() {
+  document.getElementById("collaboratorsList").innerHTML = '<div class="empty">Chargement...</div>';
+
+  fetch(SUPABASE_URL + "/functions/v1/backoffice-dashboard", { headers: authHeaders() })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      if (!data.ok) {
+        document.getElementById("collaboratorsList").innerHTML =
+          '<div class="empty">Acces refuse (' + escapeHtml(data.error || "erreur") + ')</div>';
+        return;
+      }
+
+      dashboardData = data;
+      currentInstitutionId = data.institution_id;
+      currentActorAdminUuid = data.actor_admin_uuid;
+      var collaborators = data.collaborators || [];
+      var currentActor = collaborators.find(function (collaborator) {
+        return collaborator.user_uuid === currentActorAdminUuid;
+      });
+      var connectedUserLabel =
+        currentActor && currentActor.display_name
+          ? currentActor.display_name
+          : currentSession && currentSession.user && currentSession.user.email
+            ? currentSession.user.email
+            : "Compte administrateur";
+      document.getElementById("connectedUserLabel").textContent = connectedUserLabel;
+      document.getElementById("institutionLabel").textContent = data.institution_id;
+
+      renderCollaborators(collaborators);
+      renderPending(data.pending_requests || []);
+      renderChannels(data.channels || []);
+    })
+    .catch(function (e) {
+      document.getElementById("collaboratorsList").innerHTML =
+        '<div class="empty">Erreur de chargement : ' + escapeHtml(e.message) + '</div>';
+    });
+}
+
+function callManage(action, payload) {
+  var body = Object.assign({ action: action }, payload);
+
+  return fetch(SUPABASE_URL + "/functions/v1/backoffice-manage", {
+    method: "POST",
+    headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+    body: JSON.stringify(body)
+  }).then(function (res) { return res.json(); });
+}
+
+/* --- Collaborateurs --- */
+function renderCollaborators(list) {
+  var container = document.getElementById("collaboratorsList");
+
+  if (!list.length) {
+    container.innerHTML = '<div class="empty">Aucun collaborateur pour le moment.</div>';
+    return;
+  }
+
+  container.innerHTML = list.map(function (c) {
+    var statusClass = c.active ? "" : "inactive";
+    var chips = (c.channels || []).map(function (ch) {
+      return '<span class="chip">' + escapeHtml(ch) + '</span>';
+    }).join("");
+
+    var toggleLabel = c.active ? "Désactiver" : "Réactiver";
+    var toggleAction = c.active ? "deactivate" : "reactivate";
+
+    return (
+      '<div class="row-card ' + statusClass + '">' +
+      '<div class="avatar" style="background:' + colorFor(c.user_uuid) + '">' + escapeHtml(initials(c.display_name)) + '</div>' +
+      '<div class="row-main">' +
+      '<div class="row-name">' + escapeHtml(c.display_name) + (c.active ? "" : " (désactivé)") + '</div>' +
+      '<div class="row-sub">' + (c.device_count || 0) + ' appareil(s) - ' + relativeTime(c.last_seen_at) + '</div>' +
+      '<div class="chips">' + chips + '</div>' +
+      '</div>' +
+      '<div class="row-actions">' +
+      '<button class="btn-small" data-edit-user="' + escapeHtml(c.user_uuid) + '">Modifier</button>' +
+      '<button class="btn-small secondary" data-toggle-user="' + escapeHtml(c.user_uuid) + '" data-toggle-action="' + toggleAction + '">' + toggleLabel + '</button>' +
+      '</div>' +
+      '</div>'
+    );
+  }).join("");
+
+  var editButtons = container.querySelectorAll("[data-edit-user]");
+  for (var i = 0; i < editButtons.length; i++) {
+    editButtons[i].addEventListener("click", function () {
+      openEditModal(this.getAttribute("data-edit-user"));
+    });
+  }
+
+  var toggleButtons = container.querySelectorAll("[data-toggle-user]");
+  for (var j = 0; j < toggleButtons.length; j++) {
+    toggleButtons[j].addEventListener("click", function () {
+      var userUuid = this.getAttribute("data-toggle-user");
+      var action = this.getAttribute("data-toggle-action");
+      toggleUserActive(userUuid, action);
+    });
+  }
+}
+
+function toggleUserActive(userUuid, action) {
+  var confirmMsg = action === "deactivate"
+    ? "Désactiver ce collaborateur ? Son accès au chat sera coupé immédiatement."
+    : "Réactiver ce collaborateur ?";
+
+  if (!window.confirm(confirmMsg)) return;
+
+  var rpcAction = action === "deactivate" ? "deactivate_user" : "reactivate_user";
+
+  callManage(rpcAction, { user_uuid: userUuid }).then(function (data) {
+    var result = data.result || {};
+    if (!data.ok || result.success !== true) {
+      alert("Échec : " + (result.status_code || data.error || "erreur inconnue"));
+      return;
+    }
+    loadDashboard();
+  }).catch(function (e) {
+    alert("Erreur : " + e.message);
+  });
+}
+
+/* --- Edition collaborateur (canaux) --- */
+function openEditModal(userUuid) {
+  var collaborator = (dashboardData.collaborators || []).filter(function (c) {
+    return c.user_uuid === userUuid;
+  })[0];
+
+  if (!collaborator) return;
+
+  currentEditingUser = collaborator;
+
+  document.getElementById("editTitle").textContent = "Modifier " + collaborator.display_name;
+  document.getElementById("editError").style.display = "none";
+
+  var activeChannels = collaborator.channels || [];
+  var allChannels = dashboardData.channels || [];
+
+  var checksHtml = allChannels.map(function (ch) {
+    var isAll = ch.channel_id === "all";
+    var isChecked = isAll || activeChannels.indexOf(ch.label) !== -1;
+    var disabled = isAll ? "disabled" : "";
+    var disabledNote = ch.enabled ? "" : " (canal désactivé)";
+
+    return (
+      '<label class="check-row">' +
+      '<input type="checkbox" class="edit-channel" value="' + escapeHtml(ch.channel_id) + '" ' + (isChecked ? "checked" : "") + ' ' + disabled + '>' +
+      escapeHtml(ch.label) + (isAll ? " (obligatoire)" : "") + escapeHtml(disabledNote) +
+      '</label>'
+    );
+  }).join("");
+
+  document.getElementById("editContent").innerHTML =
+    '<label class="field-label">Canaux accessibles</label>' +
+    '<div class="check-list">' + checksHtml + '</div>';
+
+  document.getElementById("editOverlay").classList.add("open");
+}
+
+document.getElementById("editCancel").addEventListener("click", function () {
+  document.getElementById("editOverlay").classList.remove("open");
+});
+
+document.getElementById("editConfirm").addEventListener("click", function () {
+  if (!currentEditingUser) return;
+
+  var errorBox = document.getElementById("editError");
+  errorBox.style.display = "none";
+
+  var checks = document.querySelectorAll(".edit-channel");
+  var channelIds = [];
+  for (var i = 0; i < checks.length; i++) {
+    if (checks[i].checked) channelIds.push(checks[i].value);
+  }
+
+  var btn = document.getElementById("editConfirm");
+  btn.disabled = true;
+  btn.textContent = "Enregistrement...";
+
+  callManage("update_channels", {
+    user_uuid: currentEditingUser.user_uuid,
+    channel_ids: channelIds
+  }).then(function (data) {
+    btn.disabled = false;
+    btn.textContent = "Enregistrer";
+
+    var result = data.result || {};
+
+    if (!data.ok || result.success !== true) {
+      errorBox.textContent = "Échec : " + (result.status_code || data.error || "erreur inconnue");
+      errorBox.style.display = "block";
+      return;
+    }
+
+    document.getElementById("editOverlay").classList.remove("open");
+    loadDashboard();
+  }).catch(function (e) {
+    btn.disabled = false;
+    btn.textContent = "Enregistrer";
+    errorBox.textContent = "Erreur : " + e.message;
+    errorBox.style.display = "block";
+  });
+});
+
+/* --- Demandes en attente --- */
+function renderPending(list) {
+  var container = document.getElementById("pendingList");
+  var badge = document.getElementById("pendingCount");
+
+  if (list.length) {
+    badge.style.display = "inline-flex";
+    badge.textContent = list.length;
+  } else {
+    badge.style.display = "none";
+  }
+
+  if (!list.length) {
+    container.innerHTML = '<div class="empty">Aucune demande en attente.</div>';
+    return;
+  }
+
+  container.innerHTML = list.map(function (r) {
+    var groups = (r.suggested_groups || []).map(function (g) {
+      return '<span class="chip suggested">' + escapeHtml(g) + '</span>';
+    }).join("");
+
+    return (
+      '<div class="row-card pending">' +
+      '<div class="avatar" style="background:' + colorFor(r.request_id) + '">' + escapeHtml(initials(r.suggested_display_name)) + '</div>' +
+      '<div class="row-main">' +
+      '<div class="row-name">' + escapeHtml(r.suggested_display_name || "Sans nom") + '</div>' +
+      '<div class="row-sub">Expire le ' + formatExpiry(r.expires_at) + '</div>' +
+      '<div class="chips">' + groups + '</div>' +
+      '</div>' +
+      '<button class="btn-small" data-request="' + escapeHtml(r.request_id) + '">Examiner</button>' +
+      '</div>'
+    );
+  }).join("");
+
+  var buttons = container.querySelectorAll("[data-request]");
+  for (var i = 0; i < buttons.length; i++) {
+    buttons[i].addEventListener("click", function () {
+      openApproveModal(this.getAttribute("data-request"));
+    });
+  }
+}
+
+function openApproveModal(requestId) {
+  document.getElementById("approveError").style.display = "none";
+  document.getElementById("approveOverlay").classList.add("open");
+
+  var request = (dashboardData.pending_requests || []).find(function (item) {
+    return item.request_id === requestId;
+  });
+
+  if (!request) {
+    currentDetail = null;
+    document.getElementById("approveContent").innerHTML =
+      '<p>Cette demande n’est plus disponible. Actualise la page.</p>';
+    return;
+  }
+
+  currentDetail = Object.assign({}, request, {
+    channels: (dashboardData.channels || []).filter(function (channel) {
+      return channel.enabled === true;
+    }),
+    existing_users: (dashboardData.collaborators || []).filter(function (user) {
+      return user.active === true;
+    }).map(function (user) {
+      return {
+        user_uuid: user.user_uuid,
+        display_name: user.display_name,
+        goodbarber_user_id: user.goodbarber_user_id
+      };
+    })
+  });
+
+  renderApproveForm();
+}
+
+function renderApproveForm() {
+  var d = currentDetail;
+  var suggested = (d.suggested_groups || []).map(function (g) { return String(g).toLowerCase(); });
+
+  var channelsHtml = (d.channels || []).map(function (ch) {
+    var isAll = ch.channel_id === "all";
+    var isSuggested = suggested.indexOf(String(ch.label).toLowerCase()) !== -1;
+    var checked = isAll || isSuggested ? "checked" : "";
+    var disabled = isAll ? "disabled" : "";
+
+    return (
+      '<label class="check-row">' +
+      '<input type="checkbox" class="approve-channel" value="' + escapeHtml(ch.channel_id) + '" ' + checked + ' ' + disabled + '>' +
+      escapeHtml(ch.label) + (isAll ? " (obligatoire)" : "") +
+      '</label>'
+    );
+  }).join("");
+
+  var existingOptions = (d.existing_users || []).map(function (u) {
+    return '<option value="' + escapeHtml(u.user_uuid) + '">' + escapeHtml(u.display_name) + '</option>';
+  }).join("");
+
+  document.getElementById("approveContent").innerHTML =
+    '<p class="hint">Nom déclaré : <strong>' + escapeHtml(d.suggested_display_name || "-") + '</strong></p>' +
+    '<label class="field-label" for="approveDisplayName">Nom affiche dans le chat</label>' +
+    '<input type="text" id="approveDisplayName" value="' + escapeHtml(d.suggested_display_name || "") + '">' +
+    '<label class="field-label">Canaux accessibles</label>' +
+    '<div class="check-list">' + channelsHtml + '</div>' +
+    (existingOptions ? (
+      '<label class="field-label" for="approveExistingUser">Ou rattacher à un collaborateur existant</label>' +
+      '<select id="approveExistingUser" style="width:100%;padding:11px 12px;border:1px solid #c7d0d5;border-radius:10px;font:inherit;">' +
+      '<option value="">Nouveau collaborateur</option>' + existingOptions +
+      '</select>'
+    ) : "");
+}
+
+document.getElementById("approveCancel").addEventListener("click", function () {
+  document.getElementById("approveOverlay").classList.remove("open");
+});
+
+document.getElementById("approveConfirm").addEventListener("click", function () {
+  if (!currentDetail) return;
+
+  var errorBox = document.getElementById("approveError");
+  errorBox.style.display = "none";
+
+  var existingSelect = document.getElementById("approveExistingUser");
+  var existingUserUuid = existingSelect ? existingSelect.value : "";
+
+  var payload = { request_id: currentDetail.request_id };
+
+  if (existingUserUuid) {
+    payload.existing_user_uuid = existingUserUuid;
+    payload.channel_ids = [];
+  } else {
+    var displayName = document.getElementById("approveDisplayName").value.trim();
+
+    if (!displayName) {
+      errorBox.textContent = "Le nom affiché est obligatoire.";
+      errorBox.style.display = "block";
+      return;
+    }
+
+    var checks = document.querySelectorAll(".approve-channel");
+    var channelIds = [];
+    for (var i = 0; i < checks.length; i++) {
+      if (checks[i].checked) channelIds.push(checks[i].value);
+    }
+
+    payload.display_name = displayName;
+    payload.channel_ids = channelIds;
+  }
+
+  var btn = document.getElementById("approveConfirm");
+  btn.disabled = true;
+  btn.textContent = "Enregistrement...";
+
+  fetch(SUPABASE_URL + "/functions/v1/backoffice-approve", {
+    method: "POST",
+    headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+    body: JSON.stringify(payload)
+  })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      btn.disabled = false;
+      btn.textContent = "Confirmer et activer";
+
+      var result = data.result || {};
+
+      if (!data.ok || result.success !== true) {
+        errorBox.textContent = "Échec : " + (result.status_code || data.error || "erreur inconnue");
+        errorBox.style.display = "block";
+        return;
+      }
+
+      document.getElementById("approveOverlay").classList.remove("open");
+      loadDashboard();
+    })
+    .catch(function (e) {
+      btn.disabled = false;
+      btn.textContent = "Confirmer et activer";
+      errorBox.textContent = "Erreur : " + e.message;
+      errorBox.style.display = "block";
+    });
+});
+
+/* --- Canaux --- */
+function renderChannels(list) {
+  var container = document.getElementById("channelsList");
+
+  if (!list.length) {
+    container.innerHTML = '<div class="empty">Aucun canal pour le moment.</div>';
+    return;
+  }
+
+  container.innerHTML = list.map(function (ch) {
+    var isProtected = PROTECTED_CHANNEL_IDS.indexOf(ch.channel_id) !== -1;
+    var rowClass = ch.enabled ? "" : "channel-disabled";
+    var toggleLabel = ch.enabled ? "Désactiver" : "Activer";
+
+    var toggleBtn = isProtected && ch.enabled
+      ? ""
+      : '<button class="btn-small secondary" data-toggle-channel="' + escapeHtml(ch.channel_id) + '" data-enabled="' + (ch.enabled ? "false" : "true") + '">' + toggleLabel + '</button>';
+
+    return (
+      '<div class="channel-row ' + rowClass + '">' +
+      '<div class="channel-info">' +
+      '<div class="channel-label">' + escapeHtml(ch.label) + (ch.enabled ? "" : " (désactivé)") + '</div>' +
+      '<div class="channel-id mono">' + escapeHtml(ch.channel_id) + '</div>' +
+      (isProtected ? '<div class="channel-protected">Canal protege</div>' : "") +
+      '</div>' +
+      '<div class="channel-actions">' +
+      '<button class="btn-small secondary" data-rename-channel="' + escapeHtml(ch.channel_id) + '">Renommer</button>' +
+      toggleBtn +
+      '</div>' +
+      '</div>'
+    );
+  }).join("");
+
+  var renameButtons = container.querySelectorAll("[data-rename-channel]");
+  for (var i = 0; i < renameButtons.length; i++) {
+    renameButtons[i].addEventListener("click", function () {
+      openRenameModal(this.getAttribute("data-rename-channel"));
+    });
+  }
+
+  var toggleButtons = container.querySelectorAll("[data-toggle-channel]");
+  for (var j = 0; j < toggleButtons.length; j++) {
+    toggleButtons[j].addEventListener("click", function () {
+      var channelId = this.getAttribute("data-toggle-channel");
+      var newEnabled = this.getAttribute("data-enabled") === "true";
+      toggleChannelEnabled(channelId, newEnabled);
+    });
+  }
+}
+
+function toggleChannelEnabled(channelId, newEnabled) {
+  var confirmMsg = newEnabled
+    ? "Réactiver ce canal ?"
+    : "Désactiver ce canal ? Il ne sera plus utilisable, mais son historique est conservé.";
+
+  if (!window.confirm(confirmMsg)) return;
+
+  callManage("set_channel_enabled", { channel_id: channelId, enabled: newEnabled }).then(function (data) {
+    var result = data.result || {};
+    if (!data.ok || result.success !== true) {
+      alert("Échec : " + (result.status_code || data.error || "erreur inconnue"));
+      return;
+    }
+    loadDashboard();
+  }).catch(function (e) {
+    alert("Erreur : " + e.message);
+  });
+}
+
+function openRenameModal(channelId) {
+  var channel = (dashboardData.channels || []).filter(function (c) { return c.channel_id === channelId; })[0];
+  if (!channel) return;
+
+  currentRenamingChannelId = channelId;
+  document.getElementById("renameChannelLabel").value = channel.label;
+  document.getElementById("renameError").style.display = "none";
+  document.getElementById("renameOverlay").classList.add("open");
+}
+
+document.getElementById("renameCancel").addEventListener("click", function () {
+  document.getElementById("renameOverlay").classList.remove("open");
+});
+
+document.getElementById("renameConfirm").addEventListener("click", function () {
+  if (!currentRenamingChannelId) return;
+
+  var errorBox = document.getElementById("renameError");
+  errorBox.style.display = "none";
+
+  var newLabel = document.getElementById("renameChannelLabel").value.trim();
+
+  if (!newLabel) {
+    errorBox.textContent = "Le nom ne peut pas etre vide.";
+    errorBox.style.display = "block";
+    return;
+  }
+
+  var btn = document.getElementById("renameConfirm");
+  btn.disabled = true;
+  btn.textContent = "Enregistrement...";
+
+  callManage("rename_channel", { channel_id: currentRenamingChannelId, label: newLabel }).then(function (data) {
+    btn.disabled = false;
+    btn.textContent = "Enregistrer";
+
+    var result = data.result || {};
+
+    if (!data.ok || result.success !== true) {
+      errorBox.textContent = "Échec : " + (result.status_code || data.error || "erreur inconnue");
+      errorBox.style.display = "block";
+      return;
+    }
+
+    document.getElementById("renameOverlay").classList.remove("open");
+    loadDashboard();
+  }).catch(function (e) {
+    btn.disabled = false;
+    btn.textContent = "Enregistrer";
+    errorBox.textContent = "Erreur : " + e.message;
+    errorBox.style.display = "block";
+  });
+});
+
+/* --- Nouveau canal --- */
+document.getElementById("newChannelLabel").addEventListener("input", function () {
+  var idField = document.getElementById("newChannelId");
+  if (!idField.dataset.touched) {
+    idField.value = slugify(this.value);
+  }
+});
+
+document.getElementById("newChannelId").addEventListener("input", function () {
+  this.dataset.touched = "true";
+});
+
+document.getElementById("newChannelBtn").addEventListener("click", function () {
+  var errorBox = document.getElementById("newChannelError");
+  errorBox.style.display = "none";
+
+  var label = document.getElementById("newChannelLabel").value.trim();
+  var channelId = slugify(document.getElementById("newChannelId").value);
+
+  if (!label) {
+    errorBox.textContent = "Le nom affiché est obligatoire.";
+    errorBox.style.display = "block";
+    return;
+  }
+
+  if (!channelId) {
+    errorBox.textContent = "L'identifiant technique est obligatoire.";
+    errorBox.style.display = "block";
+    return;
+  }
+
+  var btn = document.getElementById("newChannelBtn");
+  btn.disabled = true;
+  btn.textContent = "Création...";
+
+  callManage("create_channel", { channel_id: channelId, label: label }).then(function (data) {
+    btn.disabled = false;
+    btn.textContent = "Créer le canal";
+
+    var result = data.result || {};
+
+    if (!data.ok || result.success !== true) {
+      errorBox.textContent = "Échec : " + (result.status_code || data.error || "erreur inconnue");
+      errorBox.style.display = "block";
+      return;
+    }
+
+    document.getElementById("newChannelLabel").value = "";
+    document.getElementById("newChannelId").value = "";
+    document.getElementById("newChannelId").dataset.touched = "";
+    loadDashboard();
+  }).catch(function (e) {
+    btn.disabled = false;
+    btn.textContent = "Créer le canal";
+    errorBox.textContent = "Erreur : " + e.message;
+    errorBox.style.display = "block";
+  });
+});
+
+/* --- Documentation IA --- */
+var RAG_STATUS_LABELS = {
+  draft: "En attente",
+  processing: "Traitement en cours",
+  ready: "Prêt à activer",
+  active: "Actif",
+  obsolete: "Version obsolète",
+  error: "Erreur"
+};
+
+var RAG_STAGE_LABELS = {
+  queued: "En attente",
+  extraction: "Extraction",
+  embedding: "Indexation",
+  completed: "Terminé"
+};
+
+var RAG_NON_RETRYABLE_ERRORS = {
+  no_usable_text: "Ce fichier ne contient pas de texte exploitable. Dépose une nouvelle version avec un fichier corrigé.",
+  unsupported_format: "Ce format de fichier n'est pas pris en charge. Dépose une nouvelle version au format PDF ou DOCX.",
+  invalid_file: "Ce fichier est invalide. Dépose une nouvelle version avec un fichier corrigé."
+};
+
+function formatFileSize(bytes) {
+  var value = Number(bytes || 0);
+  if (value < 1024 * 1024) return Math.max(1, Math.round(value / 1024)) + " Ko";
+  return (value / (1024 * 1024)).toFixed(1).replace(".", ",") + " Mo";
+}
+
+function formatDate(value) {
+  if (!value) return "-";
+  return new Date(value).toLocaleDateString("fr-CH");
+}
+
+function readRagApiResponse(res) {
+  return res.json().catch(function () {
+    return {};
+  }).then(function (data) {
+    var errorCode = String(data.code || data.status_code || "");
+    if (
+      res.status === 401 ||
+      errorCode === "unauthorized" ||
+      errorCode === "session_invalid" ||
+      errorCode === "invalid_session"
+    ) {
+      showLoginAfterSessionEnd();
+      var sessionError = new Error(
+        "Votre session a expiré. Reconnectez-vous pour continuer."
+      );
+      sessionError.sessionEnded = true;
+      throw sessionError;
+    }
+    return { response: res, data: data };
+  });
+}
+
+function callRagAdmin(action, payload) {
+  return fetch(SUPABASE_URL + "/functions/v1/rag-admin-documents", {
+    method: "POST",
+    headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+    body: JSON.stringify(Object.assign({ action: action }, payload || {}))
+  }).then(function (res) {
+    return readRagApiResponse(res).then(function (result) {
+      if (!result.response.ok || result.data.success !== true) {
+        throw new Error(result.data.message || result.data.code || "Opération impossible.");
+      }
+      return result.data;
+    });
+  });
+}
+
+function stopRagPolling() {
+  if (ragPollTimer) {
+    window.clearTimeout(ragPollTimer);
+    ragPollTimer = null;
+  }
+}
+
+function scheduleRagPolling() {
+  stopRagPolling();
+  var hasOpenProcessing = ragDocuments.some(function (doc) {
+    var job = doc.latest_job || {};
+    return doc.status === "draft" ||
+      doc.status === "processing" ||
+      job.status === "queued" ||
+      job.status === "running";
+  });
+  if (activeTab === "rag" && hasOpenProcessing) {
+    ragPollTimer = window.setTimeout(loadRagDocuments, 5000);
+  }
+}
+
+function loadRagDocuments() {
+  var container = document.getElementById("ragDocumentsList");
+  if (!ragDocuments.length) {
+    container.innerHTML = '<div class="empty">Chargement...</div>';
+  }
+
+  callRagAdmin("list").then(function (data) {
+    ragDocuments = data.documents || [];
+    renderRagDocuments(ragDocuments);
+    scheduleRagPolling();
+  }).catch(function (e) {
+    stopRagPolling();
+    if (e && e.sessionEnded) return;
+    container.innerHTML =
+      '<div class="empty">Impossible de charger les documents : ' + escapeHtml(e.message) + '</div>';
+  });
+}
+
+function renderRagDocuments(list) {
+  var container = document.getElementById("ragDocumentsList");
+  if (!list.length) {
+    container.innerHTML = '<div class="empty">Aucun document pour le moment.</div>';
+    return;
+  }
+
+  container.innerHTML = list.map(function (doc) {
+    var status = String(doc.status || "draft");
+    var statusLabel = RAG_STATUS_LABELS[status] || status;
+    var job = doc.latest_job || null;
+    var stage = job ? (RAG_STAGE_LABELS[job.stage] || job.stage) : "";
+    var total = job && Number(job.total_items) > 0 ? Number(job.total_items) : 0;
+    var processed = job ? Number(job.processed_items || 0) : 0;
+    var percent = total ? Math.min(100, Math.round(processed * 100 / total)) : 0;
+    var progress = (status === "processing" || (job && job.status === "running"))
+      ? '<div class="rag-progress"><span style="width:' + percent + '%"></span></div>'
+      : "";
+    var jobMeta = job
+      ? '<div class="rag-meta">' + escapeHtml(stage) +
+        (total ? " - " + processed + "/" + total + " passages" : "") +
+        " - tentative " + Number(job.attempt_count || 0) + "/" + Number(job.max_attempts || 3) +
+        '</div>'
+      : "";
+    var errorText = doc.error_message || (job && job.last_error_message) || "";
+    var errorHtml = errorText
+      ? '<div class="rag-error-detail">' + escapeHtml(errorText) + '</div>'
+      : "";
+    var lastErrorCode = job ? String(job.last_error_code || "") : "";
+    var retryBlockedMessage = RAG_NON_RETRYABLE_ERRORS[lastErrorCode] || "";
+    if (status === "error" && retryBlockedMessage) {
+      errorHtml += '<div class="rag-error-detail">' + escapeHtml(retryBlockedMessage) + '</div>';
+    }
+    var details = [
+      escapeHtml(doc.category),
+      "version " + escapeHtml(doc.version_label),
+      escapeHtml(doc.original_file_name),
+      formatFileSize(doc.file_size_bytes)
+    ];
+    if (doc.page_count) details.push(doc.page_count + " page(s)");
+    if (doc.passage_count) details.push(doc.passage_count + " passage(s)");
+
+    var actions = [];
+    if (status === "ready") {
+      actions.push('<button class="btn-small" data-rag-activate="' + escapeHtml(doc.document_id) + '">Activer</button>');
+    } else if (
+      status === "error" &&
+      !retryBlockedMessage &&
+      (!job || Number(job.attempt_count || 0) < Number(job.max_attempts || 3))
+    ) {
+      actions.push('<button class="btn-small secondary" data-rag-retry="' + escapeHtml(doc.document_id) + '">Réessayer</button>');
+    } else if (status === "draft" && (!job || job.status !== "running")) {
+      actions.push('<button class="btn-small secondary" data-rag-retry="' + escapeHtml(doc.document_id) + '">Lancer</button>');
+    }
+    var deletionBlocked =
+      status === "processing" ||
+      (job && (job.status === "queued" || job.status === "running"));
+    if (!deletionBlocked) {
+      actions.push('<button class="btn-small danger" data-rag-delete="' + escapeHtml(doc.document_id) + '">Supprimer</button>');
+    }
+
+    return (
+      '<div class="row-card rag-card status-' + escapeHtml(status) + '">' +
+      '<div class="row-main">' +
+      '<div class="row-name">' + escapeHtml(doc.title) + '</div>' +
+      '<div class="row-sub">' + details.join(" - ") + '</div>' +
+      '<span class="rag-status ' + escapeHtml(status) + '">' + escapeHtml(statusLabel) + '</span>' +
+      (doc.effective_date ? '<div class="rag-meta">Entrée en vigueur : ' + formatDate(doc.effective_date) + '</div>' : "") +
+      jobMeta + progress + errorHtml +
+      '</div>' +
+      '<div class="row-actions">' + actions.join("") + '</div>' +
+      '</div>'
+    );
+  }).join("");
+
+  var activateButtons = container.querySelectorAll("[data-rag-activate]");
+  for (var i = 0; i < activateButtons.length; i++) {
+    activateButtons[i].addEventListener("click", function () {
+      activateRagDocument(this.getAttribute("data-rag-activate"), this);
+    });
+  }
+
+  var retryButtons = container.querySelectorAll("[data-rag-retry]");
+  for (var j = 0; j < retryButtons.length; j++) {
+    retryButtons[j].addEventListener("click", function () {
+      processRagDocument(this.getAttribute("data-rag-retry"), this);
+    });
+  }
+
+  var deleteButtons = container.querySelectorAll("[data-rag-delete]");
+  for (var k = 0; k < deleteButtons.length; k++) {
+    deleteButtons[k].addEventListener("click", function () {
+      deleteRagDocument(this.getAttribute("data-rag-delete"), this);
+    });
+  }
+}
+
+function processRagDocument(documentId, button) {
+  var originalText = button ? button.textContent : "";
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Lancement...";
+  }
+
+  fetch(SUPABASE_URL + "/functions/v1/rag-process-document", {
+    method: "POST",
+    headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+    body: JSON.stringify({ document_id: documentId })
+  }).then(function (res) {
+    return readRagApiResponse(res).then(function (result) {
+      if (!result.response.ok || result.data.success !== true) {
+        throw new Error(result.data.message || result.data.code || "Le traitement n'a pas pu démarrer.");
+      }
+      return result.data;
+    });
+  }).then(function () {
+    loadRagDocuments();
+  }).catch(function (e) {
+    if (e && e.sessionEnded) return;
+    if (button) {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+    alert("Échec : " + e.message);
+    loadRagDocuments();
+  });
+}
+
+function activateRagDocument(documentId, button) {
+  if (!window.confirm(
+    "Activer cette version ? L'éventuelle version active du même document deviendra obsolète."
+  )) return;
+
+  button.disabled = true;
+  button.textContent = "Activation...";
+
+  callRagAdmin("activate", { document_id: documentId }).then(function () {
+    loadRagDocuments();
+  }).catch(function (e) {
+    if (e && e.sessionEnded) return;
+    button.disabled = false;
+    button.textContent = "Activer";
+    alert("Échec : " + e.message);
+  });
+}
+
+function deleteRagDocument(documentId, button) {
+  var documentToDelete = ragDocuments.find(function (doc) {
+    return doc.document_id === documentId;
+  });
+  if (!documentToDelete) {
+    alert("Ce document n’est plus disponible. Actualise la liste.");
+    loadRagDocuments();
+    return;
+  }
+
+  var currentJob = documentToDelete.latest_job || null;
+  if (
+    documentToDelete.status === "processing" ||
+    (currentJob && (currentJob.status === "queued" || currentJob.status === "running"))
+  ) {
+    alert("Ce document ne peut pas être supprimé pendant son traitement.");
+    loadRagDocuments();
+    return;
+  }
+
+  var warning =
+    'Supprimer définitivement « ' + documentToDelete.title + ' » ?\n\n' +
+    "Le document, ses passages et son historique de traitement seront supprimés. Cette action est irréversible.";
+  if (!window.confirm(warning)) return;
+
+  var confirmationTitle = null;
+  if (documentToDelete.status === "active") {
+    confirmationTitle = window.prompt(
+      "Ce document est actif. Pour confirmer sa suppression, saisis exactement son titre :\n\n" +
+      documentToDelete.title
+    );
+    if (confirmationTitle === null) return;
+    confirmationTitle = confirmationTitle.trim();
+    if (confirmationTitle !== documentToDelete.title) {
+      alert("Le titre saisi ne correspond pas. Le document n’a pas été supprimé.");
+      return;
+    }
+  }
+
+  button.disabled = true;
+  button.textContent = "Suppression...";
+
+  callRagAdmin("delete", {
+    document_id: documentId,
+    confirm_delete: true,
+    confirmation_title: confirmationTitle
+  }).then(function (data) {
+    if (data.storage_cleanup_pending === true) {
+      alert(
+        "Le document a été supprimé de la base, mais le fichier source n’a pas pu être effacé automatiquement."
+      );
+    }
+    loadRagDocuments();
+  }).catch(function (e) {
+    if (e && e.sessionEnded) return;
+    button.disabled = false;
+    button.textContent = "Supprimer";
+    alert("Suppression impossible : " + e.message);
+  });
+}
+
+document.getElementById("ragTitle").addEventListener("input", function () {
+  var keyField = document.getElementById("ragDocumentKey");
+  if (!keyField.dataset.touched) keyField.value = slugify(this.value);
+});
+
+document.getElementById("ragDocumentKey").addEventListener("input", function () {
+  this.dataset.touched = "true";
+});
+
+document.getElementById("ragRefreshBtn").addEventListener("click", function () {
+  loadRagDocuments();
+});
+
+function resetRagUploadForm() {
+  document.getElementById("ragTitle").value = "";
+  document.getElementById("ragDocumentKey").value = "";
+  document.getElementById("ragDocumentKey").dataset.touched = "";
+  document.getElementById("ragCategory").value = "";
+  document.getElementById("ragVersion").value = "";
+  document.getElementById("ragEffectiveDate").value = "";
+  document.getElementById("ragFile").value = "";
+}
+
+document.getElementById("ragUploadBtn").addEventListener("click", function () {
+  var title = document.getElementById("ragTitle").value.trim();
+  var documentKey = slugify(document.getElementById("ragDocumentKey").value);
+  var category = document.getElementById("ragCategory").value.trim();
+  var version = document.getElementById("ragVersion").value.trim();
+  var effectiveDate = document.getElementById("ragEffectiveDate").value;
+  var fileInput = document.getElementById("ragFile");
+  var file = fileInput.files && fileInput.files[0];
+  var errorBox = document.getElementById("ragUploadError");
+  var message = document.getElementById("ragUploadMsg");
+  var button = document.getElementById("ragUploadBtn");
+  var uploadedDocumentId = null;
+
+  errorBox.style.display = "none";
+  message.textContent = "";
+  message.className = "msg";
+
+  if (!title || !documentKey || !category || !version || !file) {
+    errorBox.textContent = "Titre, clé documentaire, catégorie, version et fichier sont obligatoires.";
+    errorBox.style.display = "block";
+    return;
+  }
+  if (!/\.(pdf|docx)$/i.test(file.name)) {
+    errorBox.textContent = "Le fichier doit être un PDF ou un document Word .docx.";
+    errorBox.style.display = "block";
+    return;
+  }
+  if (file.size > 20 * 1024 * 1024) {
+    errorBox.textContent = "Le fichier dépasse la limite de 20 Mo.";
+    errorBox.style.display = "block";
+    return;
+  }
+
+  var form = new FormData();
+  form.append("document_key", documentKey);
+  form.append("title", title);
+  form.append("category", category);
+  form.append("version_label", version);
+  if (effectiveDate) form.append("effective_date", effectiveDate);
+  form.append("file", file, file.name);
+
+  button.disabled = true;
+  button.textContent = "Dépôt en cours...";
+
+  fetch(SUPABASE_URL + "/functions/v1/rag-upload-document", {
+    method: "POST",
+    headers: authHeaders(),
+    body: form
+  }).then(function (res) {
+    return readRagApiResponse(res).then(function (result) {
+      if (!result.response.ok || result.data.success !== true) {
+        throw new Error(result.data.message || result.data.code || "Le dépôt a échoué.");
+      }
+      return result.data;
+    });
+  }).then(function (data) {
+    uploadedDocumentId = data.document_id;
+    resetRagUploadForm();
+    message.textContent = "Fichier enregistré. Lancement du traitement...";
+    message.className = "msg ok";
+    return fetch(SUPABASE_URL + "/functions/v1/rag-process-document", {
+      method: "POST",
+      headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+      body: JSON.stringify({ document_id: data.document_id })
+    }).then(function (res) {
+      return readRagApiResponse(res).then(function (result) {
+        if (!result.response.ok || result.data.success !== true) {
+          throw new Error(result.data.message || result.data.code || "Le traitement n'a pas pu démarrer.");
+        }
+        return result.data;
+      });
+    });
+  }).then(function () {
+    button.disabled = false;
+    button.textContent = "Déposer et lancer le traitement";
+    message.textContent = "Traitement lancé. L'état se mettra à jour automatiquement.";
+    message.className = "msg ok";
+    loadRagDocuments();
+  }).catch(function (e) {
+    if (e && e.sessionEnded) return;
+    button.disabled = false;
+    button.textContent = "Déposer et lancer le traitement";
+    errorBox.textContent = uploadedDocumentId
+      ? "Le fichier est enregistré, mais le traitement n'a pas démarré. Utilise le bouton « Lancer » dans la liste. " + e.message
+      : e.message;
+    errorBox.style.display = "block";
+    loadRagDocuments();
+  });
+});
+
+/* --- Administration des règles déterministes --- */
+var RULE_STATUS_LABELS = {
+  proposed: "À vérifier",
+  needs_attention: "Correction nécessaire",
+  approved: "Approuvée, en attente d’activation",
+  validated: "Active",
+  rejected: "Rejetée",
+  invalidated: "Remplacée ou retirée"
+};
+
+var RULE_ACTION_LABELS = {
+  confirm_or_reject: "Vérifier et décider",
+  correct_or_reject: "Corriger ou rejeter",
+  activate_document: "Activer le document",
+  create_revision: "Créer une révision"
+};
+
+var RULE_EVENT_LABELS = {
+  rag_rule_created: "Règle créée",
+  rag_rule_corrected: "Règle corrigée",
+  rag_rule_precheck_failed: "Contrôle d’intégrité refusé",
+  rag_rule_approved: "Règle approuvée",
+  rag_rule_validated: "Règle activée",
+  rag_rule_rejected: "Règle rejetée",
+  rag_rule_revision_created: "Révision créée",
+  rag_rule_replaced: "Règle remplacée",
+  rag_rule_simulated: "Simulation effectuée",
+  rag_rule_status_restored_after_backfill: "Statut restauré après correction technique"
+};
+
+var RULE_REJECTION_LABELS = {
+  incorrect_values: "Valeurs incorrectes",
+  incorrect_or_insufficient_sources: "Sources incorrectes ou insuffisantes",
+  not_applicable_to_institution: "Règle non applicable à l’institution",
+  wrong_template: "Mauvais type de règle",
+  other: "Autre motif"
+};
+
+var RULE_SIMULATION_ERROR_LABELS = {
+  question_outside_template: "Ce motif n’est pas couvert par cette règle."
+};
+
+function ruleSimulationErrorMessage(code) {
+  var normalizedCode = String(code || "");
+  return RULE_SIMULATION_ERROR_LABELS[normalizedCode] ||
+    "La simulation n’a pas pu être réalisée.";
+}
+
+function callRagRuleAdmin(payload, allowBusinessFailure) {
+  return fetch(SUPABASE_URL + "/functions/v1/rag-admin-rules", {
+    method: "POST",
+    headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+    body: JSON.stringify(payload)
+  }).then(function (res) {
+    return readRagApiResponse(res).then(function (result) {
+      if (!allowBusinessFailure && (!result.response.ok || result.data.success !== true)) {
+        var error = new Error(
+          result.data.message || result.data.code || result.data.status_code || "Opération impossible."
+        );
+        error.data = result.data;
+        throw error;
+      }
+      return result.data;
+    });
+  });
+}
+
+function ruleListRequest() {
+  var filter = document.getElementById("ruleStatusFilter").value;
+  var request = { action: "list", limit: 100 };
+  if (filter === "action") request.action_required = true;
+  else if (filter === "closed") request.statuses = ["rejected", "invalidated"];
+  else if (filter !== "all") request.statuses = [filter];
+  return request;
+}
+
+function loadRagRuleSets() {
+  var container = document.getElementById("rulesList");
+  container.innerHTML = '<div class="empty">Chargement...</div>';
+  callRagRuleAdmin(ruleListRequest()).then(function (data) {
+    ragRuleSets = data.rule_sets || [];
+    renderRagRuleSets(ragRuleSets);
+    var actionable = ragRuleSets.filter(function (item) {
+      return item.action_required != null;
+    }).length;
+    var count = document.getElementById("rulesCount");
+    count.textContent = String(actionable);
+    count.style.display = actionable ? "inline-flex" : "none";
+  }).catch(function (e) {
+    if (e && e.sessionEnded) return;
+    container.innerHTML = '<div class="empty">Impossible de charger les règles : ' + escapeHtml(e.message) + '</div>';
+  });
+}
+
+function renderRagRuleSets(list) {
+  var container = document.getElementById("rulesList");
+  if (!list.length) {
+    container.innerHTML = '<div class="empty">Aucune règle ne correspond à ce filtre.</div>';
+    return;
+  }
+  container.innerHTML = list.map(function (item) {
+    var status = String(item.status || "");
+    var action = item.action_required ? (RULE_ACTION_LABELS[item.action_required] || item.action_required) : "";
+    return (
+      '<div class="row-card rule-card status-' + escapeHtml(status) + '">' +
+        '<div class="row-main">' +
+          '<div class="row-name">' + escapeHtml(item.template_name || item.template_key) + '</div>' +
+          '<div class="row-sub">' + escapeHtml(item.document_title) + ' · version ' + escapeHtml(item.version_label) + '</div>' +
+          '<div class="rule-summary">' +
+            '<span class="rag-status ' + escapeHtml(status) + '">' + escapeHtml(RULE_STATUS_LABELS[status] || status) + '</span>' +
+            '<span class="chip">Révision ' + Number(item.revision_number || 0) + '</span>' +
+            (action ? '<span class="chip suggested">' + escapeHtml(action) + '</span>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div class="row-actions"><button class="btn-small" data-rule-open="' + escapeHtml(item.rule_set_id) + '">Ouvrir</button></div>' +
+      '</div>'
+    );
+  }).join("");
+  var buttons = container.querySelectorAll("[data-rule-open]");
+  for (var i = 0; i < buttons.length; i++) {
+    buttons[i].addEventListener("click", function () {
+      openRagRuleDetail(this.getAttribute("data-rule-open"));
+    });
+  }
+}
+
+function setRuleDetailError(message) {
+  var box = document.getElementById("ruleDetailError");
+  box.textContent = message || "";
+  box.style.display = message ? "block" : "none";
+}
+
+function openRagRuleDetail(ruleSetId) {
+  var overlay = document.getElementById("ruleOverlay");
+  var container = document.getElementById("ruleDetailContent");
+  overlay.classList.add("open");
+  container.innerHTML = '<div class="empty">Chargement...</div>';
+  setRuleDetailError("");
+  Promise.all([
+    callRagRuleAdmin({ action: "detail", rule_set_id: ruleSetId }),
+    callRagRuleAdmin({ action: "history", rule_set_id: ruleSetId, limit: 100 })
+  ]).then(function (results) {
+    currentRuleDetail = results[0];
+    renderRagRuleDetail(results[0], results[1].events || []);
+  }).catch(function (e) {
+    if (e && e.sessionEnded) return;
+    container.innerHTML = '<div class="empty">Impossible de charger cette règle.</div>';
+    setRuleDetailError(e.message);
+  });
+}
+
+function closeRagRuleDetail() {
+  currentRuleDetail = null;
+  document.getElementById("ruleOverlay").classList.remove("open");
+  setRuleDetailError("");
+}
+
+function renderBlockingIssues(integrity) {
+  var issues = integrity && Array.isArray(integrity.blocking_issues)
+    ? integrity.blocking_issues
+    : [];
+  if (!issues.length) return "";
+  return '<ul style="margin:8px 0 0;padding-left:20px;">' + issues.map(function (issue) {
+    return '<li>' + escapeHtml(issue.code || "Erreur d’intégrité") + '</li>';
+  }).join("") + '</ul>';
+}
+
+function renderRuleSources(rawRule) {
+  var sources = Array.isArray(rawRule.sources) ? rawRule.sources : [];
+  if (!sources.length) return '<div class="rule-source">Aucune source liée.</div>';
+  return sources.map(function (source) {
+    var reference = [source.article_reference, source.section_title, source.source_reference]
+      .filter(Boolean).join(" · ");
+    var pages = source.page_start
+      ? "Page" + (source.page_end && source.page_end !== source.page_start ? "s" : "") + " " +
+        source.page_start + (source.page_end && source.page_end !== source.page_start ? "–" + source.page_end : "")
+      : "";
+    return '<div class="rule-source">' +
+      (reference ? '<strong>' + escapeHtml(reference) + '</strong>\n' : '') +
+      (pages ? escapeHtml(pages) + '\n' : '') +
+      escapeHtml(source.content || "") +
+      '</div>';
+  }).join("");
+}
+
+function renderRuleEditor(rawRuleSet) {
+  var rules = Array.isArray(rawRuleSet.rules) ? rawRuleSet.rules : [];
+  var templateFacts = rawRuleSet.template && Array.isArray(rawRuleSet.template.facts)
+    ? rawRuleSet.template.facts
+    : [];
+  var factByKey = {};
+  templateFacts.forEach(function (fact) { factByKey[fact.fact_key] = fact; });
+
+  return '<div id="ruleEditor">' + rules.map(function (rule, ruleIndex) {
+    var groups = Array.isArray(rule.condition_groups) ? rule.condition_groups : [];
+    var conditionsHtml = groups.map(function (group, groupIndex) {
+      var conditions = Array.isArray(group.conditions) ? group.conditions : [];
+      return conditions.map(function (condition, conditionIndex) {
+        var fact = factByKey[condition.fact_key] || {};
+        var label = fact.label_fr || condition.fact_label_fr || condition.fact_key;
+        var valueInput;
+        if (condition.fact_value_type === "category") {
+          var values = Array.isArray(fact.category_values) ? fact.category_values : [];
+          valueInput = '<select data-rule-value="category">' + values.map(function (value) {
+            return '<option value="' + escapeHtml(value.value_key) + '"' +
+              (value.value_key === condition.category_value ? ' selected' : '') + '>' +
+              escapeHtml(value.label_fr || value.value_key) + '</option>';
+          }).join("") + '</select>';
+        } else {
+          var step = fact.integer_only === false ? "any" : "1";
+          var min = fact.minimum_number == null ? "" : ' min="' + Number(fact.minimum_number) + '"';
+          var max = fact.maximum_number == null ? "" : ' max="' + Number(fact.maximum_number) + '"';
+          valueInput = '<input type="number" data-rule-value="number" step="' + step + '"' + min + max +
+            ' value="' + Number(condition.number_value) + '">';
+        }
+        return '<div class="rule-edit-condition" data-rule-condition data-rule-index="' + ruleIndex +
+          '" data-group-index="' + groupIndex + '" data-condition-index="' + conditionIndex + '">' +
+          '<div><span class="field-label">Condition</span><div class="row-sub">' +
+            escapeHtml(label) + ' · ' + escapeHtml(condition.comparator) + '</div></div>' +
+          '<div><span class="field-label">Valeur</span>' + valueInput + '</div></div>';
+      }).join("");
+    }).join("");
+    return '<div class="rule-edit-card" data-rule-editor-index="' + ruleIndex + '">' +
+      '<div class="rule-edit-grid">' +
+        '<div><label class="field-label">Libellé</label><input type="text" data-rule-label value="' + escapeHtml(rule.label) + '"></div>' +
+        '<div><label class="field-label">Résultat (' + escapeHtml(rawRuleSet.result_unit || "valeur") + ')</label>' +
+          '<input type="number" data-rule-outcome step="any" value="' + Number(rule.outcome_value) + '"></div>' +
+      '</div>' +
+      (rule.is_default ? '<div class="chip">Règle par défaut</div>' : conditionsHtml) +
+      '<div class="row-sub" style="margin-top:9px;">Les sources ci-dessous sont conservées lors de l’enregistrement.</div>' +
+      renderRuleSources(rule) +
+    '</div>';
+  }).join("") + '</div>';
+}
+
+function renderRagRuleDetail(data, events) {
+  var detail = data.rule_set || {};
+  var display = detail.display_model || {};
+  var displayRules = Array.isArray(display.rules) ? display.rules : [];
+  var rawRules = Array.isArray(detail.rules) ? detail.rules : [];
+  var integrity = data.integrity || {};
+  var allowed = Array.isArray(data.allowed_actions) ? data.allowed_actions : [];
+  var editable = allowed.indexOf("save") !== -1;
+  var status = detail.status || "";
+
+  var displayHtml = displayRules.map(function (rule, index) {
+    var conditions = Array.isArray(rule.conditions) ? rule.conditions : [];
+    var rawRule = rawRules[index] || {};
+    return '<div class="rule-display-card">' +
+      '<strong>' + escapeHtml(rule.label) + ' — ' + escapeHtml(rule.outcome) + '</strong>' +
+      (rule.is_default ? '<div class="rule-condition">Règle par défaut</div>' : conditions.map(function (group) {
+        return '<div class="rule-condition">' + (Array.isArray(group) ? group.map(escapeHtml).join(" ET ") : "") + '</div>';
+      }).join("")) +
+      renderRuleSources(rawRule) +
+    '</div>';
+  }).join("");
+
+  var actions = [];
+  if (editable) actions.push('<button class="btn-small" id="ruleSaveBtn">Enregistrer les corrections</button>');
+  if (allowed.indexOf("confirm") !== -1) actions.push('<button class="btn-small" id="ruleConfirmBtn">Approuver</button>');
+  if (allowed.indexOf("create_revision") !== -1) actions.push('<button class="btn-small" id="ruleRevisionBtn">Créer une révision</button>');
+
+  var rejectHtml = allowed.indexOf("reject") !== -1
+    ? '<div class="rule-reject-box"><label class="field-label" for="ruleRejectReason">Motif du rejet</label>' +
+      '<select id="ruleRejectReason">' + Object.keys(RULE_REJECTION_LABELS).map(function (key) {
+        return '<option value="' + key + '">' + escapeHtml(RULE_REJECTION_LABELS[key]) + '</option>';
+      }).join("") + '</select>' +
+      '<textarea id="ruleRejectNote" maxlength="500" placeholder="Précise le motif" style="display:none;"></textarea>' +
+      '<button class="btn-small danger" id="ruleRejectBtn">Rejeter cette règle</button></div>'
+    : "";
+
+  var historyHtml = events.length ? events.map(function (event) {
+    var state = event.old_status && event.new_status && event.old_status !== event.new_status
+      ? RULE_STATUS_LABELS[event.old_status] + " → " + RULE_STATUS_LABELS[event.new_status]
+      : RULE_STATUS_LABELS[event.new_status || event.old_status] || "";
+    return '<div class="rule-history-item"><strong>' +
+      escapeHtml(RULE_EVENT_LABELS[event.event_type] || event.event_type) + '</strong>' +
+      '<div class="rule-history-meta">' + escapeHtml(event.actor_display_name || "Système") +
+      ' · ' + escapeHtml(new Date(event.created_at).toLocaleString("fr-CH")) +
+      (state ? ' · ' + escapeHtml(state) : '') + '</div></div>';
+  }).join("") : '<div class="row-sub">Aucun événement.</div>';
+
+  document.getElementById("ruleDetailContent").innerHTML =
+    '<div class="rule-detail-header"><div><div class="brand">RÈGLE IA</div>' +
+      '<h2>' + escapeHtml(detail.template_name || detail.rule_key) + '</h2>' +
+      '<div class="row-sub">' + escapeHtml(detail.document_title) + ' · version ' +
+        escapeHtml(detail.document_version_label) + ' · révision ' + Number(detail.revision_number || 0) + '</div></div>' +
+      '<span class="rag-status ' + escapeHtml(status) + '">' +
+        escapeHtml(display.status_label || RULE_STATUS_LABELS[status] || status) + '</span></div>' +
+    '<div class="rule-detail-section"><div class="rule-integrity' + (integrity.valid === true ? '' : ' invalid') + '">' +
+      (integrity.valid === true ? 'Contrôle d’intégrité réussi.' : 'Des corrections sont nécessaires.') +
+      renderBlockingIssues(integrity) + '</div></div>' +
+    '<div class="rule-detail-section"><h3>' + (editable ? 'Correction structurée' : 'Valeurs et sources') + '</h3>' +
+      (editable ? renderRuleEditor(detail) : displayHtml) +
+      '<div class="rule-action-bar">' + actions.join("") + '</div>' + rejectHtml + '</div>' +
+    '<div class="rule-detail-section"><h3>Tester une question</h3>' +
+      '<input type="text" id="ruleSimulationQuestion" maxlength="1000" placeholder="Ex. J’ai 58 ans et 10 ans de service, combien de jours de vacances ?">' +
+      '<button class="btn-small secondary" id="ruleSimulateBtn">Lancer la simulation</button>' +
+      '<div id="ruleSimulationResult"></div></div>' +
+    '<div class="rule-detail-section"><h3>Historique</h3>' + historyHtml + '</div>';
+
+  bindRagRuleDetailActions(detail, allowed);
+}
+
+function collectEditedRules(rawRuleSet) {
+  var rules = Array.isArray(rawRuleSet.rules) ? rawRuleSet.rules : [];
+  return rules.map(function (rule, ruleIndex) {
+    var editor = document.querySelector('[data-rule-editor-index="' + ruleIndex + '"]');
+    var label = editor.querySelector("[data-rule-label]").value.trim();
+    var outcome = Number(editor.querySelector("[data-rule-outcome]").value);
+    if (!label || !Number.isFinite(outcome)) throw new Error("Chaque règle doit avoir un libellé et un résultat valides.");
+    var groups = (rule.condition_groups || []).map(function (group, groupIndex) {
+      return {
+        display_order: Number(group.display_order || 0),
+        conditions: (group.conditions || []).map(function (condition, conditionIndex) {
+          var row = document.querySelector('[data-rule-condition][data-rule-index="' + ruleIndex +
+            '"][data-group-index="' + groupIndex + '"][data-condition-index="' + conditionIndex + '"]');
+          var input = row.querySelector("[data-rule-value]");
+          var numberValue = condition.fact_value_type === "number" ? Number(input.value) : null;
+          if (condition.fact_value_type === "number" && !Number.isFinite(numberValue)) {
+            throw new Error("Une valeur de condition est invalide.");
+          }
+          return {
+            fact_key: condition.fact_key,
+            comparator: condition.comparator,
+            fact_value_type: condition.fact_value_type,
+            number_value: numberValue,
+            category_value: condition.fact_value_type === "category" ? input.value : null
+          };
+        })
+      };
+    });
+    return {
+      rule_id: rule.rule_id,
+      outcome_value: outcome,
+      is_default: rule.is_default === true,
+      display_order: Number(rule.display_order || 0),
+      label: label,
+      condition_groups: groups,
+      source_passage_ids: (rule.source_passage_ids || []).slice()
+    };
+  });
+}
+
+function refreshCurrentRule(ruleSetId) {
+  loadRagRuleSets();
+  openRagRuleDetail(ruleSetId);
+}
+
+function bindRagRuleDetailActions(detail, allowed) {
+  var saveButton = document.getElementById("ruleSaveBtn");
+  if (saveButton) saveButton.addEventListener("click", function () {
+    setRuleDetailError("");
+    var rules;
+    try { rules = collectEditedRules(detail); }
+    catch (e) { setRuleDetailError(e.message); return; }
+    saveButton.disabled = true;
+    saveButton.textContent = "Enregistrement...";
+    callRagRuleAdmin({
+      action: "save",
+      rule_set_id: detail.rule_set_id,
+      expected_revision_number: Number(detail.revision_number),
+      operation_id: crypto.randomUUID(),
+      rules: rules
+    }).then(function () {
+      refreshCurrentRule(detail.rule_set_id);
+    }).catch(function (e) {
+      saveButton.disabled = false;
+      saveButton.textContent = "Enregistrer les corrections";
+      setRuleDetailError(e.message);
+    });
+  });
+
+  var confirmButton = document.getElementById("ruleConfirmBtn");
+  if (confirmButton) confirmButton.addEventListener("click", function () {
+    setRuleDetailError("");
+    confirmButton.disabled = true;
+    confirmButton.textContent = "Contrôle...";
+    callRagRuleAdmin({ action: "precheck", rule_set_id: detail.rule_set_id }, true).then(function (precheck) {
+      if (precheck.success !== true || precheck.valid !== true) {
+        confirmButton.disabled = false;
+        confirmButton.textContent = "Approuver";
+        setRuleDetailError("La règle ne peut pas être approuvée tant que les erreurs d’intégrité ne sont pas corrigées.");
+        return;
+      }
+      if (!window.confirm("Confirmer que les valeurs et les sources de cette règle ont été vérifiées ?")) {
+        confirmButton.disabled = false;
+        confirmButton.textContent = "Approuver";
+        return;
+      }
+      confirmButton.textContent = "Approbation...";
+      return callRagRuleAdmin({
+        action: "confirm",
+        rule_set_id: detail.rule_set_id,
+        expected_revision_number: Number(detail.revision_number),
+        operation_id: crypto.randomUUID(),
+        confirmation: true
+      }).then(function () { refreshCurrentRule(detail.rule_set_id); });
+    }).catch(function (e) {
+      confirmButton.disabled = false;
+      confirmButton.textContent = "Approuver";
+      setRuleDetailError(e.message);
+    });
+  });
+
+  var revisionButton = document.getElementById("ruleRevisionBtn");
+  if (revisionButton) revisionButton.addEventListener("click", function () {
+    if (!window.confirm("Créer une révision modifiable à partir de cette règle active ?")) return;
+    revisionButton.disabled = true;
+    revisionButton.textContent = "Création...";
+    callRagRuleAdmin({ action: "create_revision", rule_set_id: detail.rule_set_id }).then(function (data) {
+      loadRagRuleSets();
+      openRagRuleDetail(data.rule_set_id);
+    }).catch(function (e) {
+      revisionButton.disabled = false;
+      revisionButton.textContent = "Créer une révision";
+      setRuleDetailError(e.message);
+    });
+  });
+
+  var reasonSelect = document.getElementById("ruleRejectReason");
+  var note = document.getElementById("ruleRejectNote");
+  if (reasonSelect && note) reasonSelect.addEventListener("change", function () {
+    note.style.display = this.value === "other" ? "block" : "none";
+    if (this.value !== "other") note.value = "";
+  });
+  var rejectButton = document.getElementById("ruleRejectBtn");
+  if (rejectButton) rejectButton.addEventListener("click", function () {
+    var reason = reasonSelect.value;
+    var rejectionNote = note.value.trim();
+    if (reason === "other" && !rejectionNote) {
+      setRuleDetailError("Précise le motif du rejet.");
+      return;
+    }
+    if (!window.confirm("Rejeter cette règle ? Cette décision sera journalisée.")) return;
+    rejectButton.disabled = true;
+    rejectButton.textContent = "Rejet...";
+    var request = {
+      action: "reject",
+      rule_set_id: detail.rule_set_id,
+      expected_revision_number: Number(detail.revision_number),
+      operation_id: crypto.randomUUID(),
+      reason_code: reason
+    };
+    if (reason === "other") request.rejection_note = rejectionNote;
+    callRagRuleAdmin(request).then(function () {
+      refreshCurrentRule(detail.rule_set_id);
+    }).catch(function (e) {
+      rejectButton.disabled = false;
+      rejectButton.textContent = "Rejeter cette règle";
+      setRuleDetailError(e.message);
+    });
+  });
+
+  var simulateButton = document.getElementById("ruleSimulateBtn");
+  simulateButton.addEventListener("click", function () {
+    var question = document.getElementById("ruleSimulationQuestion").value.trim();
+    var resultBox = document.getElementById("ruleSimulationResult");
+    if (!question) {
+      resultBox.innerHTML = '<div class="rule-simulation-result err">Saisis une question à tester.</div>';
+      return;
+    }
+    simulateButton.disabled = true;
+    simulateButton.textContent = "Simulation...";
+    resultBox.innerHTML = "";
+    callRagRuleAdmin({ action: "simulate", rule_set_id: detail.rule_set_id, question: question }, true)
+      .then(function (result) {
+        simulateButton.disabled = false;
+        simulateButton.textContent = "Lancer la simulation";
+        if (result.success === true) {
+          resultBox.innerHTML = '<div class="rule-simulation-result"><strong>Résultat :</strong> ' +
+            escapeHtml(result.answer || result.result || "Simulation réussie") +
+            (result.needs_human_review ? '<div class="row-sub">Une vérification humaine reste recommandée.</div>' : '') + '</div>';
+        } else {
+          resultBox.innerHTML = '<div class="rule-simulation-result err">Simulation refusée : ' +
+            escapeHtml(ruleSimulationErrorMessage(result.code)) + '</div>';
+        }
+      }).catch(function (e) {
+        simulateButton.disabled = false;
+        simulateButton.textContent = "Lancer la simulation";
+        resultBox.innerHTML = '<div class="rule-simulation-result err">' + escapeHtml(e.message) + '</div>';
+      });
+  });
+}
+
+document.getElementById("ruleStatusFilter").addEventListener("change", loadRagRuleSets);
+document.getElementById("rulesRefreshBtn").addEventListener("click", loadRagRuleSets);
+document.getElementById("ruleDetailClose").addEventListener("click", closeRagRuleDetail);
+document.getElementById("ruleOverlay").addEventListener("click", function (event) {
+  if (event.target === this) closeRagRuleDetail();
+});
+</script>
+</body>
+</html>

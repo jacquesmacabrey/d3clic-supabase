@@ -45,7 +45,7 @@ import {
 } from "../_shared/rag/generation.ts";
 
 const FUNCTION_VERSION =
-  "RAG-10.7-EVENT-SUBJECT-FIX-2026-08-04";
+  "RAG-10.7-GENERATION-INVALID-FALLBACK-2026-08-05";
 const MAX_JSON_BODY_BYTES = 16 * 1024;
 const MAX_LOG_DURATION_MS = 300_000;
 
@@ -360,6 +360,65 @@ async function loadRuleContext(
   return { context, statusCode };
 }
 
+async function loadRuleCitationPassages(
+  admin: SupabaseClient,
+  authUid: string,
+  passageIds: string[],
+): Promise<SearchPassage[]> {
+  if (passageIds.length === 0) return [];
+
+  const lookup = await callRpc(
+    admin,
+    "get_rag_citation_passages_wrapper",
+    {
+      p_auth_uid: authUid,
+      p_passage_ids: [...new Set(passageIds)],
+    },
+  );
+  const statusCode = String(
+    lookup.status_code ?? "citation_lookup_failed",
+  );
+  if (lookup.success !== true || statusCode !== "ok") {
+    if (statusCode === "access_denied") {
+      throw new RagError(
+        "device_not_activated",
+        "Cet appareil n'est pas activé.",
+        403,
+      );
+    }
+    throw new RagError(
+      "deterministic_citation_lookup_failed",
+      "La vérification des sources de la règle est indisponible.",
+      500,
+    );
+  }
+  return parseSearchPassages(lookup.passages);
+}
+
+async function hydrateDeterministicSources(
+  admin: SupabaseClient,
+  authUid: string,
+  passageIds: string[],
+  contextPassages: SearchPassage[],
+): Promise<SearchPassage[]> {
+  const merged = new Map(
+    contextPassages.map((passage) => [passage.passageId, passage]),
+  );
+  const missingIds = [...new Set(passageIds)].filter((passageId) =>
+    !merged.has(passageId)
+  );
+  for (
+    const passage of await loadRuleCitationPassages(
+      admin,
+      authUid,
+      missingIds,
+    )
+  ) {
+    merged.set(passage.passageId, passage);
+  }
+  return [...merged.values()];
+}
+
 function firstRegistryMismatch(context: RuleContext): {
   templateVersionId: string;
   runtimeKey: string;
@@ -561,6 +620,52 @@ Deno.serve(async (request: Request) => {
           clientPayload(result.client, question),
         );
       }
+
+      const earlyDeterministic = evaluateValidatedRuleSets(
+        question,
+        earlyLookup.context.ruleSets,
+      );
+      if (earlyDeterministic !== null) {
+        stepStartedAt = performance.now();
+        const deterministicSources = await hydrateDeterministicSources(
+          admin,
+          authUid,
+          earlyDeterministic.sourcePassageIds,
+          [],
+        );
+        const result = validateDeterministicAnswerAgainstSources(
+          earlyDeterministic.answer,
+          earlyDeterministic.sourcePassageIds,
+          deterministicSources,
+          earlyDeterministic.errorCode,
+        );
+        const usedIds = new Set(
+          result.client.citations.map((citation) => citation.passage_id),
+        );
+        state.passages = deterministicSources.filter((passage) =>
+          usedIds.has(passage.passageId)
+        );
+        log(
+          "deterministic_preflight_resolution",
+          200,
+          result.errorCode,
+          stepStartedAt,
+        );
+        await completeLog(
+          admin,
+          config,
+          state,
+          startedAt,
+          result.logResult,
+          result.errorCode,
+        );
+        log("completed", 200);
+        return jsonResponse(
+          request,
+          requestId,
+          clientPayload(result.client, question),
+        );
+      }
     }
 
     stepStartedAt = performance.now();
@@ -695,16 +800,22 @@ Deno.serve(async (request: Request) => {
     const deterministic = evaluateValidatedRuleSets(question, ruleSets);
     if (deterministic !== null) {
       stepStartedAt = performance.now();
+      const deterministicSources = await hydrateDeterministicSources(
+        admin,
+        authUid,
+        deterministic.sourcePassageIds,
+        context.included,
+      );
       const result = validateDeterministicAnswerAgainstSources(
         deterministic.answer,
         deterministic.sourcePassageIds,
-        context.included,
+        deterministicSources,
         deterministic.errorCode,
       );
       const usedIds = new Set(
         result.client.citations.map((citation) => citation.passage_id),
       );
-      state.passages = context.included.filter((passage) =>
+      state.passages = deterministicSources.filter((passage) =>
         usedIds.has(passage.passageId)
       );
       log(
@@ -741,12 +852,18 @@ Deno.serve(async (request: Request) => {
     log("generation", 200, null, stepStartedAt);
 
     stepStartedAt = performance.now();
-    const result = validateAnswerAgainstSources(
-      generation.answer,
-      context.included,
-      ruleSets,
-      protectedPassages,
-    );
+    const result = generation.fallbackErrorCode === "generation_invalid"
+      ? insufficientAnswer(
+        undefined,
+        "generation_invalid_fallback",
+        true,
+      )
+      : validateAnswerAgainstSources(
+        generation.answer,
+        context.included,
+        ruleSets,
+        protectedPassages,
+      );
     log("validation", 200, result.errorCode, stepStartedAt);
 
     await completeLog(

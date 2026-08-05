@@ -53,6 +53,18 @@ test("les types de congé documentaires ne sont pas interceptés", () => {
   }
 });
 
+test("un déménagement personnel exprimé par un verbe atteint la règle déterministe", () => {
+  const questions = [
+    "Je déménage prochainement. À combien de jours de congé ai-je droit ?",
+    "Je dois déménager en septembre. Quel congé est prévu ?",
+    "Nous allons déménager le mois prochain. Combien de jours avons-nous ?",
+  ];
+
+  for (const question of questions) {
+    assert.equal(routeGenericLeaveQuestion(question), null, question);
+  }
+});
+
 test("un décès avec une relation indéterminée demande le lien exact", () => {
   const questions = [
     "À combien de jours de congé ai-je droit en cas de décès d’un proche ?",
