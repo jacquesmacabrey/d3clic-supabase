@@ -1,6 +1,7 @@
 import {
   type PublicDeterministicAnswer,
   questionTargetsAnnualLeave,
+  questionTargetsExceptionalLeave,
 } from "./deterministic-rules.ts";
 
 export const GENERIC_LEAVE_CLARIFICATION =
@@ -122,6 +123,7 @@ export function routeGenericLeaveQuestion(
   const text = normalize(question);
   if (!/\bconges?\b/.test(text)) return null;
   if (questionTargetsAnnualLeave(question)) return null;
+  if (questionTargetsExceptionalLeave(question)) return null;
   if (requestsLeaveOverview(text)) return null;
   if (hasSpecifiedLeaveObject(text)) return null;
   if (
