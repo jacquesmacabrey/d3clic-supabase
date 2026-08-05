@@ -25,6 +25,7 @@ export interface StructuredGeneration {
   answer: ModelAnswer;
   usage: TokenUsage;
   callCount: number;
+  fallbackErrorCode: "generation_invalid" | null;
 }
 
 interface ChatMessage {
@@ -496,7 +497,9 @@ export async function generateStructuredAnswer(
           answer.usedPassageIds.every((passageId) =>
             allowedPassageIdSet.has(passageId)
           );
-        if (citationsAreValid) return { answer, usage, callCount };
+        if (citationsAreValid) {
+          return { answer, usage, callCount, fallbackErrorCode: null };
+        }
 
         console.error("generation_invalid_citation", {
           callCount,
@@ -506,7 +509,7 @@ export async function generateStructuredAnswer(
         });
 
         if (callCount === MAX_TOTAL_CALLS) {
-          return { answer, usage, callCount };
+          return { answer, usage, callCount, fallbackErrorCode: null };
         }
         previousInvalidText = generated.text.slice(0, 8_000);
         messages = [
@@ -548,8 +551,14 @@ export async function generateStructuredAnswer(
         },
       ];
     } catch (error) {
-      const retryable =
-        error instanceof RagError &&
+      if (
+        error instanceof RagError && error.code === "generation_invalid"
+      ) {
+        if (callCount === MAX_TOTAL_CALLS) break;
+        await sleep(500);
+        continue;
+      }
+      const retryable = error instanceof RagError &&
         (error.code === "generation_retryable" ||
           error.code === "generation_unavailable");
       if (!retryable || callCount === MAX_TOTAL_CALLS) throw error;
@@ -557,9 +566,15 @@ export async function generateStructuredAnswer(
     }
   }
 
-  throw new RagError(
-    "generation_invalid",
-    "Le service de réponse a renvoyé un résultat invalide.",
-    502,
-  );
+  return {
+    answer: {
+      result: "insufficient_sources",
+      answer: "Les sources disponibles ne permettent pas de produire une réponse fiable.",
+      usedPassageIds: [],
+      needsHumanReview: true,
+    },
+    usage,
+    callCount: MAX_TOTAL_CALLS,
+    fallbackErrorCode: "generation_invalid",
+  };
 }
