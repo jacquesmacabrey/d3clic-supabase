@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { validateAnswerAgainstSources } from "../../supabase/functions/_shared/rag/answer-contract.ts";
-import { RagError } from "../../supabase/functions/_shared/rag/errors.ts";
 import {
   generateStructuredAnswer,
   safeModelOutputProbe,
 } from "../../supabase/functions/_shared/rag/generation.ts";
+import { RagError } from "../../supabase/functions/_shared/rag/errors.ts";
 
 const ALLOWED = "11111111-1111-4111-8111-111111111111";
 const INVALID = "22222222-2222-4222-8222-222222222222";
@@ -107,11 +107,58 @@ test("la génération ne dépasse jamais deux appels", async () => {
   assert.equal(generated.callCount, 2);
 });
 
-test("deux sorties JSON illisibles produisent une erreur contrôlée", async () => {
+test("deux sorties JSON illisibles produisent une insuffisance contrôlée", async () => {
   let calls = 0;
   const fetcher = async () => {
     calls += 1;
     return response("réponse non JSON");
+  };
+
+  const generated = await generateStructuredAnswer(
+    "test-model",
+    "Quel est mon droit ?",
+    CONTEXT,
+    300,
+    fetcher as typeof fetch,
+  );
+
+  assert.equal(calls, 2);
+  assert.equal(generated.callCount, 2);
+  assert.equal(generated.answer.result, "insufficient_sources");
+  assert.deepEqual(generated.answer.usedPassageIds, []);
+  assert.equal(generated.answer.needsHumanReview, true);
+  assert.equal(generated.fallbackErrorCode, "generation_invalid");
+});
+
+test("deux réponses vides produisent la même insuffisance contrôlée", async () => {
+  let calls = 0;
+  const fetcher = async () => {
+    calls += 1;
+    return response("");
+  };
+
+  const generated = await generateStructuredAnswer(
+    "test-model",
+    "Quel est mon droit ?",
+    CONTEXT,
+    300,
+    fetcher as typeof fetch,
+  );
+
+  assert.equal(calls, 2);
+  assert.equal(generated.answer.result, "insufficient_sources");
+  assert.equal(generated.fallbackErrorCode, "generation_invalid");
+});
+
+test("une indisponibilité réelle du fournisseur reste une erreur technique", async () => {
+  let calls = 0;
+  const fetcher = async () => {
+    calls += 1;
+    throw new RagError(
+      "generation_unavailable",
+      "Le service de réponse ne répond pas.",
+      502,
+    );
   };
 
   await assert.rejects(
@@ -124,7 +171,7 @@ test("deux sorties JSON illisibles produisent une erreur contrôlée", async () 
         fetcher as typeof fetch,
       ),
     (error: unknown) =>
-      error instanceof RagError && error.code === "generation_invalid",
+      error instanceof RagError && error.code === "generation_unavailable",
   );
   assert.equal(calls, 2);
 });
