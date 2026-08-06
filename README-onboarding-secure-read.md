@@ -26,10 +26,24 @@ par cette version.
 
 ## Fichiers
 
-- `supabase/migrations/20260806120000_onboarding_secure_read.sql`
+- `supabase/migrations/20260805124142_onboarding_core_schema.sql`
+- `supabase/migrations/20260805124222_onboarding_editorial_guardrails.sql`
+- `supabase/migrations/20260805124900_onboarding_foreign_key_indexes.sql`
+- `supabase/migrations/20260806101808_onboarding_secure_read.sql`
+- `supabase/migrations/20260806140548_onboarding_access_foreign_key_index.sql`
 - `supabase/functions/onboarding-content/index.ts`
 - `goodbarber/onboarding-secure-staging.html`
 - `tests/sql/onboarding-secure-read.test.sql`
+
+Les quatre premiers préfixes correspondent exactement à l'historique des
+migrations appliquées sur le staging. La réconciliation a été vérifiée par les
+postconditions de schéma, le cycle éditorial complet et les tests
+comportementaux de lecture sécurisée. La migration d'index suivante corrige
+l'unique clé étrangère Onboarding qui n'avait pas encore d'index couvrant.
+
+Le client Supabase chargé par GoodBarber est épinglé en version `2.95.0` et
+protégé par une empreinte SRI SHA-384 calculée puis vérifiée contre le fichier
+servi par jsDelivr.
 
 Le jeu de données métier (coordonnées et brouillons) est volontairement exclu
 de ce dépôt public. Il est chargé uniquement dans l’environnement Supabase de
