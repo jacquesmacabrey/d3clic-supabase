@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Onboarding — Fondation Clos Brochet</title>
+  <style>
+    :root{--blue:#196487;--dark:#0f4a66;--soft:#eaf4f8;--bg:#f7f9fa;--text:#4f5960;--ink:#27323a;--line:#e1e7ea;--white:#fff;--danger:#9f2d2d}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+    button,select,input{font:inherit}.app{max-width:760px;margin:auto;padding:14px 14px 32px}.hero{padding:24px 20px;border-radius:22px;background:linear-gradient(135deg,var(--blue),var(--dark));color:#fff;box-shadow:0 8px 24px #1964871a}.hero h1{margin:0 0 7px;font-size:1.7rem;line-height:1.2}.hero p{margin:0}.progress{height:10px;margin-top:18px;overflow:hidden;border-radius:99px;background:#ffffff38}.progress span{display:block;width:0;height:100%;background:#fff;transition:width .2s}.progress-label{margin-top:7px;font-size:.86rem}.status,.card{margin-top:14px;padding:17px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 2px 12px #1e323c0d}.status{background:var(--soft);color:var(--ink)}.status.error{border-color:#eabbbb;background:#fff4f4;color:var(--danger)}.status[hidden],.panel[hidden],.field[hidden]{display:none}.card h2,.card h3{margin:0 0 10px;color:var(--ink);line-height:1.25}.card h2{font-size:1.25rem}.card h3{font-size:1.02rem}.muted{font-size:.9rem;color:#68747b}.fields{display:grid;gap:12px}.field label,.search-label{display:block;margin:0 0 5px;font-weight:700;color:var(--ink)}select,input[type=search]{width:100%;min-height:46px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--ink)}:focus-visible{outline:3px solid #19648738;outline-offset:2px}.tabs{display:flex;gap:8px;margin:14px 0 0;overflow:auto;padding:0 0 5px}.tab{flex:0 0 auto;min-height:42px;padding:9px 13px;border:1px solid var(--line);border-radius:99px;background:#fff;color:var(--ink);font-weight:700}.tab[aria-selected=true]{border-color:var(--blue);background:var(--blue);color:#fff}.item{padding:13px 0;border-top:1px solid var(--line)}.item:first-child{border-top:0}.item h3,.item p{margin:0}.item p{margin-top:5px;white-space:pre-line}.meta{margin-top:4px;color:#68747b;font-size:.86rem}.check{display:flex;gap:10px;align-items:flex-start;padding:11px 0;border-top:1px solid var(--line);color:var(--ink)}.check:first-child{border-top:0}.check input{margin-top:5px;transform:scale(1.15);accent-color:var(--blue)}.empty{padding:12px;border-radius:11px;background:var(--soft);color:var(--ink)}.retry{margin-top:10px;padding:10px 14px;border:0;border-radius:10px;background:var(--blue);color:#fff;font-weight:700}.doc-state{display:inline-block;margin-top:6px;padding:4px 8px;border-radius:99px;background:var(--soft);font-size:.82rem}.faq button{width:100%;padding:13px 0;border:0;border-top:1px solid var(--line);background:transparent;text-align:left;color:var(--ink);font-weight:700}.faq:first-child button{border-top:0}.faq div{padding:0 0 12px;white-space:pre-line}.footer{text-align:center;margin-top:18px;font-size:.8rem;color:#7a858b}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="hero">
+      <h1>Bienvenue à Clos Brochet</h1>
+      <p>Votre parcours d’intégration, avec uniquement les informations validées et publiées.</p>
+      <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+      <div class="progress-label" id="progressLabel">Chargement…</div>
+    </header>
+
+    <section id="status" class="status" role="status" aria-live="polite">Connexion sécurisée…</section>
+
+    <div id="application" hidden>
+      <section class="card" aria-labelledby="profileTitle">
+        <h2 id="profileTitle">Votre parcours</h2>
+        <p class="muted" id="institutionLabel"></p>
+        <div class="fields">
+          <div class="field" id="serviceField">
+            <label for="serviceSelect">Service</label>
+            <select id="serviceSelect"><option value="">Sélectionnez un service</option></select>
+          </div>
+          <div class="field" id="jobField" hidden>
+            <label for="jobSelect">Métier</label>
+            <select id="jobSelect"><option value="">Sélectionnez un métier</option></select>
+          </div>
+          <div class="field" id="unitField" hidden>
+            <label for="unitSelect">Unité</label>
+            <select id="unitSelect"><option value="">Sélectionnez une unité</option></select>
+          </div>
+        </div>
+      </section>
+
+      <nav class="tabs" role="tablist" aria-label="Rubriques Onboarding">
+        <button class="tab" role="tab" aria-selected="true" aria-controls="contentPanel" id="contentTab">Parcours</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="checklistPanel" id="checklistTab">Checklist</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="documentsPanel" id="documentsTab">Documents</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="contactsPanel" id="contactsTab">Contacts</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="faqPanel" id="faqTab">FAQ</button>
+      </nav>
+
+      <section class="panel card" role="tabpanel" id="contentPanel" aria-labelledby="contentTab"><h2>Votre parcours d’intégration</h2><div id="contentList"></div></section>
+      <section class="panel card" role="tabpanel" id="checklistPanel" aria-labelledby="checklistTab" hidden><h2>Checklist personnelle</h2><p class="muted">Les coches restent uniquement sur cet appareil et ne sont jamais transmises aux RH.</p><div id="checklistList"></div></section>
+      <section class="panel card" role="tabpanel" id="documentsPanel" aria-labelledby="documentsTab" hidden><h2>Documents utiles</h2><div id="documentsList"></div></section>
+      <section class="panel card" role="tabpanel" id="contactsPanel" aria-labelledby="contactsTab" hidden><h2>Contacts utiles</h2><div id="contactsList"></div></section>
+      <section class="panel card" role="tabpanel" id="faqPanel" aria-labelledby="faqTab" hidden><h2>FAQ</h2><label class="search-label" for="faqSearch">Rechercher</label><input id="faqSearch" type="search" placeholder="Ex. badge, planning, repas…"><div id="faqList"></div></section>
+    </div>
+    <p class="footer">Environnement de test — aucun brouillon n’est affiché.</p>
+  </main>
+
+  <script
+    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.95.0/dist/umd/supabase.js"
+    integrity="sha384-XOgt1ZFimk4zHEFJt46uyOeRhPxz22jaYBEJlZAE8Ie/gBMAZv/K6K4iB5CnoMRX"
+    crossorigin="anonymous"
+  ></script>
+  <script>
+    (() => {
+      "use strict";
+
+      const SUPABASE_URL = "https://lhrctmwxdgscfisrnqko.supabase.co";
+      const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_FZE7LGStABdMlbHHdzw11g__hZrdwvv";
+      const CHECKLIST_STORAGE_KEY = "d3clic:onboarding:checklist:v1";
+      const PROFILE_STORAGE_KEY = "d3clic:onboarding:profile:v1";
+      const state = { bundle: null, service: "", job: "", unit: "" };
+
+      const el = (id) => document.getElementById(id);
+      const status = el("status");
+      const application = el("application");
+      const serviceSelect = el("serviceSelect");
+      const jobSelect = el("jobSelect");
+      const unitSelect = el("unitSelect");
+
+      function node(tag, text, className) {
+        const value = document.createElement(tag);
+        if (text !== undefined && text !== null) value.textContent = String(text);
+        if (className) value.className = className;
+        return value;
+      }
+
+      function safeRead(key, fallback) {
+        try {
+          const raw = localStorage.getItem(key);
+          return raw ? JSON.parse(raw) : fallback;
+        } catch (_) {
+          return fallback;
+        }
+      }
+
+      function safeWrite(key, value) {
+        try { localStorage.setItem(key, JSON.stringify(value)); } catch (_) {}
+      }
+
+      function showStatus(message, error) {
+        status.textContent = "";
+        status.classList.toggle("error", !!error);
+        status.append(node("span", message));
+        if (error) {
+          const retry = node("button", "Réessayer", "retry");
+          retry.type = "button";
+          retry.addEventListener("click", load);
+          status.append(retry);
+        }
+        status.hidden = false;
+      }
+
+      function empty(container, message) {
+        container.replaceChildren(node("p", message, "empty"));
+      }
+
+      function scopeMatches(item) {
+        return (!item.service_key || item.service_key === state.service) &&
+          (!item.job_key || item.job_key === state.job) &&
+          (!item.unit_key || item.unit_key === state.unit);
+      }
+
+      function visible(items) {
+        return (items || []).filter(scopeMatches);
+      }
+
+      function fillSelect(select, items, placeholder, selected) {
+        select.replaceChildren();
+        const first = node("option", placeholder);
+        first.value = "";
+        select.append(first);
+        items.forEach((item) => {
+          const option = node("option", item.name);
+          option.value = item.key;
+          select.append(option);
+        });
+        select.value = items.some((item) => item.key === selected) ? selected : "";
+        return select.value;
+      }
+
+      function renderProfile() {
+        const bundle = state.bundle;
+        state.service = fillSelect(serviceSelect, bundle.services || [], "Sélectionnez un service", state.service);
+        const jobs = (bundle.jobs || []).filter((item) => item.service_key === state.service);
+        const units = (bundle.units || []).filter((item) => item.service_key === state.service);
+        state.job = fillSelect(jobSelect, jobs, "Sélectionnez un métier", state.job);
+        state.unit = fillSelect(unitSelect, units, "Sélectionnez une unité", state.unit);
+        el("jobField").hidden = jobs.length === 0;
+        el("unitField").hidden = units.length === 0;
+        el("serviceField").hidden = (bundle.services || []).length === 0;
+        safeWrite(PROFILE_STORAGE_KEY, { service: state.service, job: state.job, unit: state.unit });
+      }
+
+      function renderContent() {
+        const container = el("contentList");
+        const items = visible(state.bundle.content);
+        container.replaceChildren();
+        if (!items.length) return empty(container, "Aucun contenu publié ne correspond encore à ce parcours.");
+        items.forEach((item) => {
+          const article = node("article", null, "item");
+          article.append(node("h3", item.title));
+          article.append(node("p", item.body));
+          container.append(article);
+        });
+      }
+
+      function checklistState() {
+        const saved = safeRead(CHECKLIST_STORAGE_KEY, {});
+        return saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
+      }
+
+      function updateProgress() {
+        const boxes = [...document.querySelectorAll("#checklistList input[type=checkbox]")];
+        const done = boxes.filter((box) => box.checked).length;
+        const pct = boxes.length ? Math.round(done / boxes.length * 100) : 0;
+        el("progressBar").style.width = pct + "%";
+        el("progressLabel").textContent = boxes.length ? pct + " % de votre checklist complétée" : "Checklist en attente de publication";
+      }
+
+      function renderChecklist() {
+        const container = el("checklistList");
+        const items = visible(state.bundle.checklist);
+        const saved = checklistState();
+        container.replaceChildren();
+        if (!items.length) { empty(container, "Aucun élément de checklist n’est publié."); updateProgress(); return; }
+        items.forEach((item) => {
+          const label = node("label", null, "check");
+          const box = document.createElement("input");
+          box.type = "checkbox";
+          box.checked = saved[item.key] === true;
+          box.addEventListener("change", () => {
+            const next = checklistState();
+            next[item.key] = box.checked;
+            safeWrite(CHECKLIST_STORAGE_KEY, next);
+            updateProgress();
+          });
+          label.append(box, node("span", item.label));
+          container.append(label);
+        });
+        updateProgress();
+      }
+
+      function renderDocuments() {
+        const container = el("documentsList");
+        const items = visible(state.bundle.documents);
+        container.replaceChildren();
+        if (!items.length) return empty(container, "Aucun document n’est publié pour ce parcours.");
+        items.forEach((item) => {
+          const article = node("article", null, "item");
+          article.append(node("h3", item.title));
+          if (item.description) article.append(node("p", item.description));
+          if (item.transmission_instructions) article.append(node("p", item.transmission_instructions, "meta"));
+          article.append(node("span", item.available ? "Fichier disponible — lien sécurisé à venir" : "Fichier en attente", "doc-state"));
+          container.append(article);
+        });
+      }
+
+      function renderContacts() {
+        const container = el("contactsList");
+        const items = visible(state.bundle.contacts);
+        container.replaceChildren();
+        if (!items.length) return empty(container, "Aucun contact n’est publié pour ce parcours.");
+        items.forEach((item) => {
+          const article = node("article", null, "item");
+          article.append(node("h3", item.name));
+          article.append(node("p", item.role));
+          const details = [item.phone, item.email].filter(Boolean).join(" · ");
+          if (details) article.append(node("p", details, "meta"));
+          container.append(article);
+        });
+      }
+
+      function renderFaq() {
+        const container = el("faqList");
+        const query = el("faqSearch").value.trim().toLocaleLowerCase("fr");
+        const items = visible(state.bundle.faq).filter((item) => !query || (item.question + " " + item.answer + " " + (item.category || "")).toLocaleLowerCase("fr").includes(query));
+        container.replaceChildren();
+        if (!items.length) return empty(container, "Aucune question ne correspond.");
+        items.forEach((item) => {
+          const wrapper = node("div", null, "faq");
+          const button = node("button", item.question);
+          button.type = "button";
+          button.setAttribute("aria-expanded", "false");
+          const answer = node("div", item.answer);
+          answer.hidden = true;
+          button.addEventListener("click", () => {
+            answer.hidden = !answer.hidden;
+            button.setAttribute("aria-expanded", String(!answer.hidden));
+          });
+          wrapper.append(button, answer);
+          container.append(wrapper);
+        });
+      }
+
+      function renderAll() {
+        renderProfile();
+        renderContent();
+        renderChecklist();
+        renderDocuments();
+        renderContacts();
+        renderFaq();
+      }
+
+      async function load() {
+        showStatus("Connexion sécurisée…", false);
+        application.hidden = true;
+        try {
+          if (!window.supabase || !window.supabase.createClient) throw new Error("client_unavailable");
+          const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+            auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+          });
+          let sessionResult = await client.auth.getSession();
+          if (!sessionResult.data.session) {
+            const anonymous = await client.auth.signInAnonymously();
+            if (anonymous.error) throw anonymous.error;
+          }
+          const result = await client.functions.invoke("onboarding-content", { method: "GET" });
+          if (result.error || !result.data || result.data.authorized !== true) {
+            const code = result.data && result.data.error;
+            if (code === "not_authorized" || (result.error && result.error.context && result.error.context.status === 403)) {
+              showStatus("Cet appareil n’a pas encore d’accès Onboarding actif. Demandez l’activation ou le renouvellement de votre accès.", true);
+              return;
+            }
+            throw result.error || new Error("invalid_response");
+          }
+          state.bundle = result.data;
+          const profile = safeRead(PROFILE_STORAGE_KEY, {});
+          state.service = profile.service || "";
+          state.job = profile.job || "";
+          state.unit = profile.unit || "";
+          el("institutionLabel").textContent = result.data.context.institution + " · accès jusqu’au " + new Date(result.data.context.access_expires_at).toLocaleDateString("fr-CH");
+          status.hidden = true;
+          application.hidden = false;
+          renderAll();
+        } catch (_) {
+          showStatus("Le contenu sécurisé n’a pas pu être chargé. Vérifiez la connexion puis réessayez.", true);
+        }
+      }
+
+      serviceSelect.addEventListener("change", () => { state.service = serviceSelect.value; state.job = ""; state.unit = ""; renderAll(); });
+      jobSelect.addEventListener("change", () => { state.job = jobSelect.value; renderAll(); });
+      unitSelect.addEventListener("change", () => { state.unit = unitSelect.value; renderAll(); });
+      el("faqSearch").addEventListener("input", renderFaq);
+
+      document.querySelectorAll("[role=tab]").forEach((tab) => {
+        tab.addEventListener("click", () => {
+          document.querySelectorAll("[role=tab]").forEach((candidate) => candidate.setAttribute("aria-selected", String(candidate === tab)));
+          document.querySelectorAll("[role=tabpanel]").forEach((panel) => { panel.hidden = panel.id !== tab.getAttribute("aria-controls"); });
+        });
+      });
+
+      load();
+    })();
+  </script>
+</body>
+</html>
