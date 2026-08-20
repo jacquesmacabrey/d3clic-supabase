@@ -4,6 +4,7 @@ import {
   insufficientAnswer,
   parseSearchPassages,
   type SearchPassage,
+  sourceFallbackAnswer,
   validateAnswerAgainstSources,
   validateDeterministicAnswerAgainstSources,
   type ValidatedAnswer,
@@ -45,7 +46,7 @@ import {
 } from "../_shared/rag/generation.ts";
 
 const FUNCTION_VERSION =
-  "RAG-10.7-GENERATION-INVALID-FALLBACK-2026-08-05";
+  "RAG-10.9-GENERAL-OVERVIEW-2026-08-20";
 const MAX_JSON_BODY_BYTES = 16 * 1024;
 const MAX_LOG_DURATION_MS = 300_000;
 
@@ -55,6 +56,7 @@ interface LogState {
   logId: string | null;
   passages: SearchPassage[];
   generationAttempted: boolean;
+  generationModel: string | null;
   usage: TokenUsage | null;
 }
 
@@ -209,7 +211,7 @@ async function completeLog(
     p_similarity_scores: state.passages.map((passage) => passage.similarity),
     p_embedding_model: EMBEDDING_MODEL,
     p_generation_model: state.generationAttempted
-      ? config.generationModel
+      ? state.generationModel ?? config.generationModel
       : null,
     p_prompt_tokens: state.usage?.promptTokens ?? null,
     p_completion_tokens: state.usage?.completionTokens ?? null,
@@ -471,6 +473,7 @@ Deno.serve(async (request: Request) => {
     logId: null,
     passages: [],
     generationAttempted: false,
+    generationModel: null,
     usage: null,
   };
 
@@ -844,19 +847,25 @@ Deno.serve(async (request: Request) => {
     state.generationAttempted = true;
     const generation = await generateStructuredAnswer(
       config.generationModel,
+      config.generationFallbackModel,
       question,
       context.context,
       config.maxAnswerTokens,
     );
+    state.generationModel = generation.attemptedModels.join(" -> ");
     state.usage = generation.usage;
     log("generation", 200, null, stepStartedAt);
 
     stepStartedAt = performance.now();
-    const result = generation.fallbackErrorCode === "generation_invalid"
-      ? insufficientAnswer(
-        undefined,
-        "generation_invalid_fallback",
-        true,
+    const result = generation.fallbackErrorCode !== null
+      ? sourceFallbackAnswer(
+        context.included,
+        question,
+        [
+          generation.fallbackErrorCode,
+          generation.invalidOutputIssue,
+          "source_fallback",
+        ].filter(Boolean).join("_"),
       )
       : validateAnswerAgainstSources(
         generation.answer,
