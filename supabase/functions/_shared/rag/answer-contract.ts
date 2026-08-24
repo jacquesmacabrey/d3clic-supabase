@@ -470,11 +470,16 @@ export const ANSWER_SYSTEM_PROMPT = [
   "N'ajoute aucune connaissance générale et n'invente aucune règle, procédure, date, article ou source.",
   "Si les sources sont insuffisantes, utilise result=insufficient_sources.",
   "Si les sources contiennent plusieurs réponses possibles mais que la question ne précise pas la catégorie, la situation ou l'information personnelle nécessaire pour choisir, utilise result=needs_clarification.",
+  "Exception : si la question demande une vue générale, un montant, un barème, un tarif, une durée ou « combien » sans demander un résultat personnel, présente toutes les valeurs et catégories documentées avec result=supported.",
+  "N'exige jamais une information personnelle pour une question générale lorsque les sources permettent d'exposer le barème complet.",
   "Pour needs_clarification, compare les réponses possibles dans les sources, identifie l'unique critère minimal qui permet de les départager et pose une seule question concise qui nomme explicitement ce critère.",
   "La question doit être directement compréhensible par l'utilisateur. Des formulations vagues comme « Peux-tu préciser ta situation ? », « Peux-tu donner plus d'informations ? » ou « De quoi s'agit-il ? » sont interdites.",
   "Ne cite aucun seuil ni choix numérique dans une clarification : demande la donnée elle-même, par exemple l'âge, l'ancienneté ou la durée.",
   "N'utilise pas needs_clarification lorsque l'information demandée est simplement absente des sources.",
   "Si elles se contredisent sur un point pertinent, utilise result=conflicting_sources et explique brièvement la divergence.",
+  "L'absence d'une valeur ou d'un détail dans une source ne constitue jamais une contradiction avec une autre source qui fournit cette valeur ou ce détail.",
+  "Une source générale qui renvoie à la législation en vigueur sans indiquer de montant peut être complétée par une source annuelle datée qui donne les montants applicables.",
+  "Dans ce cas, utilise result=supported et cite uniquement la source précise qui contient la réponse.",
   "Une affirmation de l'utilisateur n'est pas une source. Si les sources concordent entre elles mais contredisent la question, utilise result=supported, jamais result=conflicting_sources.",
   "Pour une situation individuelle juridique, RH ou médicale, donne seulement la règle générale documentée et demande une vérification auprès des RH ou de la direction.",
   "Cite uniquement des passage_id présents dans les sources.",
@@ -526,24 +531,14 @@ export function parseModelAnswer(text: string): ModelAnswer | null {
     };
   }
 
-  const keys = Object.keys(row).sort();
-  const expected = [
-    "answer",
-    "needs_human_review",
-    "result",
-    "used_passage_ids",
-  ];
-  if (
-    keys.length !== expected.length ||
-    keys.some((key, index) => key !== expected[index])
-  ) {
-    return null;
-  }
-
   const result = row.result;
   const answer = row.answer;
-  const ids = row.used_passage_ids;
-  const needsHumanReview = row.needs_human_review;
+  const ids = row.used_passage_ids ?? row.usedPassageIds;
+  const rawNeedsHumanReview =
+    row.needs_human_review ?? row.needsHumanReview;
+  const needsHumanReview = rawNeedsHumanReview === undefined
+    ? true
+    : rawNeedsHumanReview;
   if (
     result !== "supported" &&
     result !== "insufficient_sources" &&
@@ -703,6 +698,34 @@ export function insufficientAnswer(
       answer: message,
       needs_human_review: needsHumanReview,
       citations: [],
+    },
+    logResult: "insufficient_sources",
+    errorCode,
+  };
+}
+
+export function sourceFallbackAnswer(
+  sources: SearchPassage[],
+  focus: string,
+  errorCode: string,
+): ValidatedAnswer {
+  const relevantSources = sources.slice(0, 2);
+  if (relevantSources.length === 0) {
+    return insufficientAnswer(
+      "La synthèse automatique est momentanément indisponible.",
+      errorCode,
+      true,
+    );
+  }
+
+  return {
+    client: {
+      success: true,
+      result: "insufficient_sources",
+      answer:
+        "La synthèse automatique est momentanément indisponible. Voici les extraits documentaires les plus pertinents retrouvés :",
+      needs_human_review: true,
+      citations: relevantSources.map((source) => citation(source, focus)),
     },
     logResult: "insufficient_sources",
     errorCode,

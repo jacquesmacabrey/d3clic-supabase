@@ -2,6 +2,7 @@ import { RagError } from "./errors.ts";
 
 export interface AnswerConfig {
   generationModel: string;
+  generationFallbackModel: string;
   searchTopK: number;
   searchMinSimilarity: number;
   searchMaxPerDocument: number;
@@ -9,6 +10,9 @@ export interface AnswerConfig {
   maxAnswerTokens: number;
   rateLimitPerHour: number;
 }
+
+const DEFAULT_GENERATION_FALLBACK_MODEL =
+  "mistralai/Mistral-Small-4-119B-2603";
 
 type EnvReader = (name: string) => string | undefined;
 
@@ -78,6 +82,16 @@ export function readAnswerConfig(
       500,
     );
   }
+  const generationFallbackModel =
+    readEnv("RAG_GENERATION_FALLBACK_MODEL")?.trim() ||
+    DEFAULT_GENERATION_FALLBACK_MODEL;
+  if (generationFallbackModel.length > 200) {
+    throw new RagError(
+      "server_not_configured",
+      "Service momentanément indisponible.",
+      500,
+    );
+  }
 
   const searchTopK = requiredInteger("RAG_SEARCH_TOP_K", 1, 20, readEnv);
   const searchMaxPerDocument = requiredInteger(
@@ -96,6 +110,7 @@ export function readAnswerConfig(
 
   return {
     generationModel,
+    generationFallbackModel,
     searchTopK,
     searchMinSimilarity: requiredNumber(
       "RAG_SEARCH_MIN_SIMILARITY",

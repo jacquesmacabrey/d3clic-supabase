@@ -5,7 +5,9 @@ import {
   ANSWER_SYSTEM_PROMPT,
   clarificationRefinementReason,
   type ModelAnswer,
+  parseModelAnswer,
   type SearchPassage,
+  sourceFallbackAnswer,
   validateAnswerAgainstSources,
 } from "../../supabase/functions/_shared/rag/answer-contract.ts";
 import { singleDayRuleSet } from "./rule-fixtures.ts";
@@ -66,6 +68,53 @@ function answer(
     ...partial,
   };
 }
+
+test("le repli fournisseur expose seulement les passages documentaires retrouvés", () => {
+  const result = sourceFallbackAnswer(
+    [maternity, internalDirective],
+    "Quelle est la durée du congé maternité ?",
+    "generation_unavailable_source_fallback",
+  );
+
+  assert.equal(result.client.result, "insufficient_sources");
+  assert.equal(result.client.needs_human_review, true);
+  assert.equal(result.client.citations.length, 2);
+  assert.deepEqual(
+    result.client.citations.map((item) => item.passage_id),
+    [PASSAGE_A, PASSAGE_B],
+  );
+  assert.match(result.client.citations[0].excerpt, /17 semaines/);
+  assert.equal(result.errorCode, "generation_unavailable_source_fallback");
+});
+
+test("le parseur ignore les champs supplémentaires sans les exposer", () => {
+  const parsed = parseModelAnswer(JSON.stringify({
+    result: "supported",
+    answer: "La tenue doit être changée aussi souvent que nécessaire.",
+    used_passage_ids: [PASSAGE_A],
+    needs_human_review: false,
+    commentaire: "champ non contractuel",
+  }));
+
+  assert.deepEqual(parsed, {
+    result: "supported",
+    answer: "La tenue doit être changée aussi souvent que nécessaire.",
+    usedPassageIds: [PASSAGE_A],
+    needsHumanReview: false,
+  });
+});
+
+test("le parseur accepte les alias camelCase et impose une révision si l'indicateur manque", () => {
+  const parsed = parseModelAnswer(JSON.stringify({
+    result: "supported",
+    answer: "Réponse documentée.",
+    usedPassageIds: [PASSAGE_A],
+  }));
+
+  assert.equal(parsed?.result, "supported");
+  assert.deepEqual(parsed?.usedPassageIds, [PASSAGE_A]);
+  assert.equal(parsed?.needsHumanReview, true);
+});
 
 test("une durée documentaire correctement citée reste autorisée", () => {
   const result = validateAnswerAgainstSources(
@@ -288,6 +337,23 @@ test("le contrat exige explicitement le critère qui départage les réponses", 
   assert.match(ANSWER_SYSTEM_PROMPT, /critère minimal/i);
   assert.match(ANSWER_SYSTEM_PROMPT, /nomme explicitement ce critère/i);
   assert.match(ANSWER_SYSTEM_PROMPT, /formulations vagues/i);
+});
+
+test("le contrat distingue une vue générale d'un calcul personnel", () => {
+  assert.match(ANSWER_SYSTEM_PROMPT, /vue générale/i);
+  assert.match(ANSWER_SYSTEM_PROMPT, /barème complet/i);
+  assert.match(ANSWER_SYSTEM_PROMPT, /toutes les valeurs et catégories/i);
+});
+
+test("le contrat distingue une source générale d'une contradiction réelle", () => {
+  assert.match(
+    ANSWER_SYSTEM_PROMPT,
+    /absence d'une valeur[^.]+ne constitue jamais une contradiction/i,
+  );
+  assert.match(
+    ANSWER_SYSTEM_PROMPT,
+    /source générale[^.]+source annuelle datée/i,
+  );
 });
 
 test("une réponse peut citer plusieurs documents actifs", () => {
