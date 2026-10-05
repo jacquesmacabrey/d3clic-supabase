@@ -485,6 +485,13 @@ var client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 var currentSession = null;
 var currentInstitutionId = null;
 var currentActorAdminUuid = null;
+var currentPermissions = {
+  can_manage_users: false,
+  can_manage_onboarding: false,
+  can_manage_channels: false,
+  can_manage_documents: false,
+  can_manage_ai_rules: false
+};
 var dashboardData = { collaborators: [], pending_requests: [], channels: [] };
 var currentDetail = null;
 var currentEditingUser = null;
@@ -615,7 +622,26 @@ document.getElementById("tabChannels").addEventListener("click", function () { s
 document.getElementById("tabRag").addEventListener("click", function () { setTab("rag"); });
 document.getElementById("tabRules").addEventListener("click", function () { setTab("rules"); });
 
+function canAccessTab(name) {
+  if (name === "channels") return currentPermissions.can_manage_channels === true;
+  if (name === "rag") return currentPermissions.can_manage_documents === true;
+  if (name === "rules") return currentPermissions.can_manage_ai_rules === true;
+  return true;
+}
+
+function applyPermissions() {
+  document.getElementById("tabChannels").style.display =
+    currentPermissions.can_manage_channels ? "" : "none";
+  document.getElementById("tabRag").style.display =
+    currentPermissions.can_manage_documents ? "" : "none";
+  document.getElementById("tabRules").style.display =
+    currentPermissions.can_manage_ai_rules ? "" : "none";
+
+  if (!canAccessTab(activeTab)) setTab("dashboard");
+}
+
 function setTab(name) {
+  if (!canAccessTab(name)) name = "dashboard";
   activeTab = name;
   document.getElementById("tabDashboard").classList.toggle("active", name === "dashboard");
   document.getElementById("tabPending").classList.toggle("active", name === "pending");
@@ -655,6 +681,8 @@ function loadDashboard() {
       dashboardData = data;
       currentInstitutionId = data.institution_id;
       currentActorAdminUuid = data.actor_admin_uuid;
+      currentPermissions = Object.assign({}, currentPermissions, data.permissions || {});
+      applyPermissions();
       var collaborators = data.collaborators || [];
       var currentActor = collaborators.find(function (collaborator) {
         return collaborator.user_uuid === currentActorAdminUuid;
@@ -715,7 +743,9 @@ function renderCollaborators(list) {
       '<div class="chips">' + chips + '</div>' +
       '</div>' +
       '<div class="row-actions">' +
-      '<button class="btn-small" data-edit-user="' + escapeHtml(c.user_uuid) + '">Modifier</button>' +
+      (currentPermissions.can_manage_channels
+        ? '<button class="btn-small" data-edit-user="' + escapeHtml(c.user_uuid) + '">Modifier</button>'
+        : '') +
       '<button class="btn-small secondary" data-toggle-user="' + escapeHtml(c.user_uuid) + '" data-toggle-action="' + toggleAction + '">' + toggleLabel + '</button>' +
       '</div>' +
       '</div>'
